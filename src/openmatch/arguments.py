@@ -161,7 +161,7 @@ class DRTrainingArguments(TrainingArguments):
     )
     negatives_x_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
     do_encode: bool = field(default=False, metadata={"help": "run the encoding loop"})
-
+    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
