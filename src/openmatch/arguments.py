@@ -190,3 +190,4 @@ class InferenceArguments(TrainingArguments):
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
+    retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
