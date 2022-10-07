@@ -6,17 +6,22 @@ import random
 from typing import List
 
 from datasets import load_dataset
-from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset,Dataset
 from transformers import PreTrainedTokenizer
 
 from ..arguments import DataArguments
 from ..trainer import DRTrainer
 
 
-class TrainDataset(IterableDataset):
-
+class TrainDatasetBase:
+    '''
+    Abstract base class for all train datasets in Openmatch.\n
+    This implants arguments and data preparation, but should be mostly used for identifying an OpenMatch Train Dataset.\n
+    All future dataset ABCs would subclass this and `(Iterable)Dataset`.
+    '''
+    
+    #Because (Iterable)Dataset does not implant functions below, This would not cause chaos in Method Resolving.
     def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        super(TrainDataset, self).__init__()
         self._prepare_data(data_args, shuffle_seed, cache_dir)
         self.tokenizer = tokenizer
         self.data_args = data_args
@@ -24,12 +29,14 @@ class TrainDataset(IterableDataset):
         self.p_max_len = data_args.p_max_len
         self.proc_num = data_args.dataset_proc_num
         self.trainer = trainer
-        self.len = self.getLen()
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
         self.data_files = None
         self.dataset = None
-    # We only needs to prepare the len once, so we prepare the len here and store it
-    def getLen(self):
+
+class TrainDataset(TrainDatasetBase,IterableDataset):
+    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
+        super(TrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+    def __len__(self):
         concat_filenames = " ".join(self.data_files)
         count = 0
         with os.popen("wc -l {}".format(concat_filenames)) as f:
@@ -39,9 +46,25 @@ class TrainDataset(IterableDataset):
                 if filename != "total":
                     count += lc
         return count
-    def __len__(self):
-        return self.len
     def __iter__(self):
+        raise NotImplementedError
+class MappingTrainDataset(TrainDatasetBase,Dataset):
+    '''
+    Abstract Base Class for Mapping-Based Datasets.\n
+    All datasets that may be used as Mapping Dataset should subclass this and not `TrainDataset`.\n
+    If a mapping dataset may also be used as Iterable, create a wrapper class for the mapping counterpart that subclasses `TrainDataset`.
+    '''
+    '''
+    Reason for subclassing Dataset and not TrainDataset:
+    Although Subclassing TrainDataset would still register the dataset (since IterableDataset subclasses Dataset), 
+    but would interfere with checks with Iterability of the Dataset (since most of the check simply checks if the dataset is subclass of IterableDataset).
+    So we must remove IterableDataset from the Base Class chain for this.
+    '''
+    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
+        super(MappingTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+    def __len__(self):
+        return len(self.dataset)
+    def __getitem__(self, index) :
         raise NotImplementedError
 
 def build_one_data(example,encode_fun,hashed_seed,epoch,data_args):
@@ -117,16 +140,15 @@ class DRTrainDataset(TrainDataset):
         self.dataset.set_epoch(epoch)
         return iter(self.dataset.map(self.get_process_fn(epoch, _hashed_seed), remove_columns=["positives", "negatives"]))
 
-class DRMappingTrainDataset(TrainDataset):
+class DRMappingTrainDataset(MappingTrainDataset):
 
     def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None,shuffle_seed = None, cache_dir: str = None) -> None:
         # No shuffle seed is needed for mapping datasets, but were keeped to maintain interface
         super(DRMappingTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
 
-        assert self.len == len(self.dataset)
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
         self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(os.path.join(data_args.train_dir, "*.jsonl"))
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
+        self.dataset = load_dataset("json", data_files=self.data_files, streaming=False, cache_dir=cache_dir)["train"]
     def create_one_example(self, text_encoding: List[int], is_query=False):
         item = self.tokenizer.encode_plus(
             text_encoding,
@@ -143,10 +165,7 @@ class DRMappingTrainDataset(TrainDataset):
         
         _hashed_seed = hash(item + self.trainer.args.seed)
         return build_one_data(group,self.create_one_example,_hashed_seed,epoch,self.data_args)
-    
-    def __iter__(self):
-        #__getitem__ defines the support of iteration by definition
-        return self
+
 
 
 class DREvalDataset(DRTrainDataset):
