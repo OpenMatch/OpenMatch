@@ -62,7 +62,7 @@ def main():
     query_dataset = InferenceDataset.load(
         tokenizer=tokenizer,
         data_args=data_args,
-        is_query=True,
+        is_query=(not encoding_args.encode_query_as_passage),
         stream=True,
         batch_size=encoding_args.per_device_eval_batch_size,
         num_processes=encoding_args.world_size,
