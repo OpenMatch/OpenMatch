@@ -206,6 +206,17 @@ python -m openmatch.driver.retrieve  \
     --dataloader_num_workers 1
 ```
 
+## Retrieval result evaluation
+
+After the training and evaluation step, you can evaluate your retrieval result using the evaluation script provided and the trec file generated above:
+
+```bash
+python scripts/evaluate.py \
+    -m <your evaluation measure> \ # e.g. mrr.10
+    <your dev qrels file> \
+    $RESULT_DIR/marco/t5-s2/dev.trec
+```
+
 ## Notes
 
 ### T5 weights scaling
