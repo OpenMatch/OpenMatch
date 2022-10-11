@@ -1,6 +1,7 @@
 # Adapted from Tevatron (https://github.com/texttron/tevatron)
 
 import copy
+import importlib
 import json
 import logging
 import os
@@ -12,8 +13,8 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-from transformers import (AutoModel, BatchEncoding, PreTrainedModel,
-                          T5EncoderModel, AutoConfig, DPRQuestionEncoder, DPRContextEncoder)
+from transformers import (AutoConfig, AutoModel, BatchEncoding,
+                          PreTrainedModel, T5EncoderModel)
 from transformers.modeling_outputs import ModelOutput
 
 from ..arguments import DataArguments
@@ -172,16 +173,17 @@ class DRModel(nn.Module):
     ):
         # load local
         config = None
-        model_class = T5EncoderModel if model_args.encoder_only else AutoModel
         head_q = head_p = None
         if os.path.exists(os.path.join(model_args.model_name_or_path, "openmatch_config.json")):
             with open(os.path.join(model_args.model_name_or_path, "openmatch_config.json")) as f:
                 config = json.load(f)
 
-        if os.path.isdir(model_args.model_name_or_path) and config is not None:  # not a raw Huggingface model
+        if os.path.isdir(model_args.model_name_or_path) and config is not None:  # an OpenMatch model
             tied = config["tied"]
             if tied:
                 logger.info(f'loading query model weight from {model_args.model_name_or_path}')
+                model_name = config["plm_backbone"]["type"]
+                model_class = getattr(importlib.import_module("transformers"), model_name)
                 lm_q = lm_p = model_class.from_pretrained(
                     model_args.model_name_or_path,
                     **hf_kwargs
@@ -193,7 +195,10 @@ class DRModel(nn.Module):
                 _psg_model_path = os.path.join(model_args.model_name_or_path, 'passage_model')
                 _qry_head_path = os.path.join(model_args.model_name_or_path, 'query_head')
                 _psg_head_path = os.path.join(model_args.model_name_or_path, 'passage_head')
+
                 logger.info(f'loading query model weight from {_qry_model_path}')
+                model_name = config["plm_backbone"]["lm_q_type"]
+                model_class = getattr(importlib.import_module("transformers"), model_name)
                 if os.path.exists(os.path.join(_qry_model_path, "config.json")):
                     logger.info(f'loading query model config from {_qry_model_path}')
                     qry_model_config = AutoConfig.from_pretrained(_qry_model_path)
@@ -202,7 +207,10 @@ class DRModel(nn.Module):
                     _qry_model_path,
                     **hf_kwargs
                 )
+
                 logger.info(f'loading passage model weight from {_psg_model_path}')
+                model_name = config["plm_backbone"]["lm_p_type"]
+                model_class = getattr(importlib.import_module("transformers"), model_name)
                 if os.path.exists(os.path.join(_psg_model_path, "config.json")):
                     logger.info(f'loading passage model config from {_psg_model_path}')
                     psg_model_config = AutoConfig.from_pretrained(_psg_model_path)
@@ -211,11 +219,13 @@ class DRModel(nn.Module):
                     _psg_model_path,
                     **hf_kwargs
                 )
+
                 if config["linear_head"]:
                     head_q = LinearHead.load(_qry_head_path)
                     head_p = LinearHead.load(_psg_head_path)
         else:  # a Huggingface model
             tied = not model_args.untie_encoder
+            model_class = T5EncoderModel if model_args.encoder_only else AutoModel
             lm_q = model_class.from_pretrained(model_args.model_name_or_path, **hf_kwargs)
             lm_p = copy.deepcopy(lm_q) if not tied else lm_q
             if model_args.add_linear_head:

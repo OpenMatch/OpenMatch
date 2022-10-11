@@ -31,7 +31,7 @@ def main():
         level=logging.INFO if encoding_args.local_rank in [-1, 0] else logging.WARN,
     )
     logger.warning(
-        "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
+        "Process rank: %s, device: %s, n_gpu: %s, distributed inference: %s, 16-bits inference: %s",
         encoding_args.local_rank,
         encoding_args.device,
         encoding_args.n_gpu,
@@ -50,7 +50,7 @@ def main():
         )
     except OSError:
         config = None
-        
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,

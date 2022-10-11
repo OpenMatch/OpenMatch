@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -9,6 +10,8 @@ from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
+logger = logging.getLogger(__name__)
+
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
@@ -19,6 +22,23 @@ def main():
         model_args: ModelArguments
         data_args: DataArguments
         encoding_args: EncodingArguments
+
+    # Setup logging
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        level=logging.INFO if encoding_args.local_rank in [-1, 0] else logging.WARN,
+    )
+    logger.warning(
+        "Process rank: %s, device: %s, n_gpu: %s, distributed inference: %s, 16-bits inference: %s",
+        encoding_args.local_rank,
+        encoding_args.device,
+        encoding_args.n_gpu,
+        bool(encoding_args.local_rank != -1),
+        encoding_args.fp16,
+    )
+    logger.info("Encoding parameters %s", encoding_args)
+    logger.info("MODEL parameters %s", model_args)
 
     num_labels = 1
     try:
