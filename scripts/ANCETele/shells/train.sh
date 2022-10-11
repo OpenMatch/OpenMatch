@@ -27,7 +27,7 @@ else
 N_PASSAGES=32
 fi
 echo "Learning $[ N_PASSAGES-1 ] negatives per query."
-# if input was a single file, we pass it as a file
+# if input is a single file, we pass it as a file
 if echo $TRAIN_FILE | grep -q -E "\.json(l?)$" ; then
 PATH_OR_DIR="train_path"
 else
