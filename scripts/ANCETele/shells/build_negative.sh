@@ -55,7 +55,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.retrieve  \
     --encode_query_as_passage \
     --doc_template "<title>[SEP]<text>"  \
     --doc_column_names id,title,text  \
-    --q_max_len 32  \
+    --p_max_len 128  \
     --retrieve_depth 200 \
     --fp16  \
     --use_gpu \

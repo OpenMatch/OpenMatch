@@ -2,7 +2,7 @@
 # The dir of the starting model.
 PLM_DIR=~/datas/OpenMatch-New/models/co-condenser-marco
 # Path to openmatch scripts.
-OPENMATCH_SCRIPTS_DIR=~/OpenMatch/scripts
+OPENMATCH_SCRIPTS_DIR=../..
 # The name of model, used for naming directories.
 PLM_NAME=co-condenser
 
