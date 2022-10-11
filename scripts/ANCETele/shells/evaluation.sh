@@ -46,10 +46,10 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.retrieve  \
     --dataloader_num_workers 1 \
     --use_gpu \
 
-     # We only need 10 documents for evaluating MRR@10
-# strip the trec file off any unwanted part leaving only "<query_id> <doc_id> <rank>"
-awk '{if ( $4<=10 ) printf "%s %s %s\n",$1,$3,$4}' ${RETRIEVE_SAVE_DIR}/dev.trec | sed "s/ /\t/g" > ${RETRIEVE_SAVE_DIR}/dev.marco
-# Finally, use official evaluation script to judge how well we've done
+     
+# Finally, We evaluate the MRR@10 on the dev set.
 echo "Evaluating..."
-python $OPENMATCH_SCRIPTS_DIR/ANCETele/ms_marco_eval.py ${COLLECTION_DIR}/qrels.dev.restructured.tsv ${RETRIEVE_SAVE_DIR}/dev.marco &> \
-${RETRIEVE_SAVE_DIR}/dev_mrr.log
+python $OPENMATCH_SCRIPTS_DIR/evaluate.py -m mrr_cut.10 \
+${COLLECTION_DIR}/qrels.dev.restructured.tsv \
+${RETRIEVE_SAVE_DIR}/dev.trec \
+ | tee ${RETRIEVE_SAVE_DIR}/dev_mrr.log
