@@ -152,8 +152,12 @@ class Retriever:
                 with torch.no_grad():
                     for k, v in batch.items():
                         batch[k] = v.to(self.args.device)
-                    model_output: DROutput = self.model(query=batch)
-                    encoded.append(model_output.q_reps.cpu().detach().numpy())
+                    if not self.args.encode_query_as_passage:
+                        model_output: DROutput = self.model(query=batch)
+                        encoded.append(model_output.q_reps.cpu().detach().numpy())
+                    else:
+                        model_output: DROutput = self.model(passage=batch)
+                        encoded.append(model_output.p_reps.cpu().detach().numpy())
         
         encoded = np.concatenate(encoded)
 
