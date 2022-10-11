@@ -140,7 +140,7 @@ class DataArguments:
         metadata={"help": "template for query"}
     )
     query_column_names: str = field(
-        default="id,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
     doc_template: str = field(
@@ -148,7 +148,7 @@ class DataArguments:
         metadata={"help": "template for doc"}
     )
     doc_column_names: str = field(
-        default="id,title,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
 

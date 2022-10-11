@@ -126,7 +126,7 @@ class JsonlDataset(InferenceDataset):
         data_args: DataArguments,
         **kwargs
     ):
-        super(JsonlDataset, self).__init__(**kwargs)
+        super(JsonlDataset, self).__init__(tokenizer, data_args, **kwargs)
         if self.stream:
             self.dataset = load_dataset(
                 "json", 
@@ -157,7 +157,8 @@ class TsvDataset(InferenceDataset):
     ):
         super(TsvDataset, self).__init__(tokenizer, data_args, is_query, **kwargs)
         self.all_columns = data_args.query_column_names if is_query else data_args.doc_column_names
-        self.all_columns = self.all_columns.split(',')
+        if self.all_columns is not None:
+            self.all_columns = self.all_columns.split(',')
         if self.stream:
             self.dataset = load_dataset(
                 "csv", 

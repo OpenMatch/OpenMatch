@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from transformers import (AutoModel, BatchEncoding, PreTrainedModel,
-                          T5EncoderModel)
+                          T5EncoderModel, AutoConfig, DPRQuestionEncoder, DPRContextEncoder)
 from transformers.modeling_outputs import ModelOutput
 
 from ..arguments import DataArguments
@@ -146,6 +146,8 @@ class DRModel(nn.Module):
                 reps = hidden[:, 0, :]
             elif self.pooling == "mean":
                 reps = mean_pooling(hidden, items.attention_mask)
+            elif self.pooling == "no":
+                reps = hidden
             else:
                 raise ValueError("Unknown pooling type: {}".format(self.pooling))
         if head is not None:
@@ -192,11 +194,19 @@ class DRModel(nn.Module):
                 _qry_head_path = os.path.join(model_args.model_name_or_path, 'query_head')
                 _psg_head_path = os.path.join(model_args.model_name_or_path, 'passage_head')
                 logger.info(f'loading query model weight from {_qry_model_path}')
+                if os.path.exists(os.path.join(_qry_model_path, "config.json")):
+                    logger.info(f'loading query model config from {_qry_model_path}')
+                    qry_model_config = AutoConfig.from_pretrained(_qry_model_path)
+                    hf_kwargs["config"] = qry_model_config
                 lm_q = model_class.from_pretrained(
                     _qry_model_path,
                     **hf_kwargs
                 )
                 logger.info(f'loading passage model weight from {_psg_model_path}')
+                if os.path.exists(os.path.join(_psg_model_path, "config.json")):
+                    logger.info(f'loading passage model config from {_psg_model_path}')
+                    psg_model_config = AutoConfig.from_pretrained(_psg_model_path)
+                    hf_kwargs["config"] = psg_model_config
                 lm_p = model_class.from_pretrained(
                     _psg_model_path,
                     **hf_kwargs

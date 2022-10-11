@@ -89,8 +89,8 @@ class Retriever:
                     pickle.dump((encoded, lookup_indices), f, protocol=4)
                 encoded = []
                 lookup_indices = []
+                prev_idx = idx
                 gc.collect()
-                prev_idx = idx + 1
 
         if len(lookup_indices) > 0:
             encoded = np.concatenate(encoded)
