@@ -4,7 +4,7 @@ OpenMatch has added support for ANCETele method of training dense retrieval mode
 
 This package is provided with tools necessary to integrate ANCETele into your negative mining loops. A script is also provided to reproduce the results in the paper.
 
-## The Key Concepts
+## <a id="the-key-concepts"></a> The Key Concepts
 
 ANCETele builds upon the idea of utilizing train-positive negatives, i.e. negative documents near positive samples, as negatives for training.
 In training, train-positive samples could be mixed with normal negative samples to achieve better stability and efficiency.
@@ -70,7 +70,10 @@ This package is provided with the necessary scripts for reproducing ANCETele res
 | Learn Rate | $5\times 10^{-5}$ |
 | Warm-up Ratio | 0.1 |
 
-### Usage of Script
+If you're simply trying to reproduce the results in the paper, you may use the shell script to help you: see [Usage of Script](#usage-of-script) for details.
+
+If you're trying to do more experiments with the method in the paper, you may refer to [Manual Operation](#manual-operation) for a step-by-step guide.
+### <a id="usage-of-script"></a> Usage of Script 
 
 **Important: Please install pytrec_eval into your environment (`pip install pytrec_eval`) before running the script.**
 
@@ -121,7 +124,7 @@ Notes:
 * The scripts have no error-checking; if any of the module is not functional, the script would still run despite the error. Please check the script logs frequently to avoid running with glitched data.
 
 * The script would redirect all outputs to the corresponding log in `${SCRIPT_LOG_DIR}`; use `tail -f ${LOG}` in another terminal to see the log updating in real-time.
-### Manual Operation
+### <a id="manual-operation"></a> Manual Operation
 
 We may separate the training loop into three phases: Negative Building, Training and Evaluation.
 
@@ -180,7 +183,7 @@ Finally, add two columns to the dev set qrel file to make it compatible with qre
 awk '{printf "%s 0 %s 1\n",$1,$2}' $COLLECTION_DIR/qrels.dev.tsv | sed "s/ /\t/g" > $COLLECTION_DIR/qrels.dev.restructured.tsv
 ```
 
-#### 1. Negative Building
+#### <a id="1-negative-building"></a> 1. Negative Building
 
 First, encode the passages with the model trained in last episode:
 
@@ -271,7 +274,7 @@ This creates a TREC-style file `train.positive.trec` in `${RETRIEVE_SAVE_DIR}`.
 Notes:
 
 * Be sure to define `--corpus_path`, `--doc_template` and `--p_max_len` in arguments; They will be used instead of query-related arguments, since we're dealing with passages.
-  See **Key Concepts** for details.
+  See [The Key Concepts](#the-key-concepts) for details.
 
 Next, we build negative files from retrieved TREC files:
 
@@ -411,7 +414,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.retrieve  \
     --use_gpu \
 ```
 
-These two steps are identical to the corresponding steps in **1. Negative Building**; Only the queries used is different.
+These two steps are identical to the corresponding steps in [1. Negative Building](#1-negative-building); Only the queries used is different.
 
 Once dev-set passages has been retrieved (in standard TREC format), you may use evaluation scripts to evaluate the model's performance.
 
