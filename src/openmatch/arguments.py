@@ -139,10 +139,11 @@ class DRTrainingArguments(TrainingArguments):
     )
     negatives_x_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
     do_encode: bool = field(default=False, metadata={"help": "run the encoding loop"})
-
+    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
+    drop_last: bool = field(default=False,metadata={"help":"Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
 
 
 @dataclass
@@ -163,10 +164,12 @@ class InferenceArguments(TrainingArguments):
     use_gpu: bool = field(default=False, metadata={"help": "Use GPU for Faiss retrieval"})
     encoded_save_path: str = field(default=None, metadata={"help": "where to save the encode"})
     trec_save_path: str = field(default=None, metadata={"help": "where to save the trec file"})
-
+    encode_query_as_passage:bool = field(default=False,metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
+    retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
+
 
     max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})
