@@ -27,7 +27,8 @@ def get_positive_and_negative_samples(query_dataset, corpus_dataset, qa_tokenize
         if not has_answers(content, answers, qa_tokenizer, regex=False):
             negatives.append(docid)
         else:
-            new_positives.append(docid)
+            if docid not in origin_positives:
+                new_positives.append(docid)
     negatives = negatives[:depth]
     random.shuffle(negatives)
     if (len(origin_positives) + len(new_positives)) >= 1 and len(negatives) >= 1:
