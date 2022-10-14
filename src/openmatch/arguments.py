@@ -164,12 +164,11 @@ class InferenceArguments(TrainingArguments):
     use_gpu: bool = field(default=False, metadata={"help": "Use GPU for Faiss retrieval"})
     encoded_save_path: str = field(default=None, metadata={"help": "where to save the encode"})
     trec_save_path: str = field(default=None, metadata={"help": "where to save the trec file"})
-    encode_query_as_passage:bool = field(default=False,metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
+    encode_query_as_passage: bool = field(default=False, metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
     retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
-
 
     max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})

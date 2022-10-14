@@ -53,7 +53,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m torch.distributed.launch --nproc_per
     --num_train_epochs 3  \
     --logging_dir ${LOG_PATH}  \
     --use_mapping_dataset \
-    --drop_last \
+    --dataloader_drop_last \
 &> ${SCRIPT_LOG_FILE} &
 else
 echo "Training on CUDA ${CUDA_TO_USE}"
@@ -72,7 +72,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.train_dr  \
     --num_train_epochs 3  \
     --logging_dir ${LOG_PATH} \
     --use_mapping_dataset \
-    --drop_last \
+    --dataloader_drop_last \
 &> ${SCRIPT_LOG_FILE} &
 fi
 

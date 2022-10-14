@@ -6,78 +6,26 @@ import random
 from typing import List
 
 from datasets import load_dataset
-from torch.utils.data import IterableDataset,Dataset
+from torch.utils.data import Dataset, IterableDataset
 from transformers import PreTrainedTokenizer
 
 from ..arguments import DataArguments
 from ..trainer import DRTrainer
 
 
-class TrainDatasetBase:
-    '''
-    Abstract base class for all train datasets in Openmatch.\n
-    This implants arguments and data preparation, but should be mostly used for identifying an OpenMatch Train Dataset.\n
-    All future dataset ABCs would subclass this and `(Iterable)Dataset`.
-    '''
-    
-    #Because (Iterable)Dataset does not implant functions below, This would not cause chaos in Method Resolving.
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        self._prepare_data(data_args, shuffle_seed, cache_dir)
-        self.tokenizer = tokenizer
-        self.data_args = data_args
-        self.q_max_len = data_args.q_max_len
-        self.p_max_len = data_args.p_max_len
-        self.proc_num = data_args.dataset_proc_num
-        self.trainer = trainer
-    def _prepare_data(self, data_args, shuffle_seed, cache_dir):
-        self.data_files = None
-        self.dataset = None
-
-class TrainDataset(TrainDatasetBase,IterableDataset):
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        super(TrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
-    def __len__(self):
-        concat_filenames = " ".join(self.data_files)
-        count = 0
-        with os.popen("wc -l {}".format(concat_filenames)) as f:
-            for line in f:
-                lc, filename = line.strip().split()
-                lc = int(lc)
-                if filename != "total":
-                    count += lc
-        return count
-    def __iter__(self):
-        raise NotImplementedError
-class MappingTrainDataset(TrainDatasetBase,Dataset):
-    '''
-    Abstract Base Class for Mapping-Based Datasets.\n
-    All datasets that may be used as Mapping Dataset should subclass this and not `TrainDataset`.\n
-    If a mapping dataset may also be used as Iterable, create a wrapper class for the mapping counterpart that subclasses `TrainDataset`.
-    '''
-    '''
-    Reason for subclassing Dataset and not TrainDataset:
-    Although Subclassing TrainDataset would still register the dataset (since IterableDataset subclasses Dataset), 
-    but would interfere with checks with Iterability of the Dataset (since most of the check simply checks if the dataset is subclass of IterableDataset).
-    So we must remove IterableDataset from the Base Class chain for this.
-    '''
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        super(MappingTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
-    def __len__(self):
-        return len(self.dataset)
-    def __getitem__(self, index) :
-        raise NotImplementedError
-
-def build_one_data(example,encode_fun,hashed_seed,epoch,data_args):
+def build_one_data(example, encode_fn, hashed_seed, epoch, data_args):
     qry = example['query']
-    encoded_query = encode_fun(qry, is_query=True)
+    encoded_query = encode_fn(qry, is_query=True)
     encoded_passages = []
     group_positives = example['positives']
     group_negatives = example['negatives']
+
     if data_args.positive_passage_no_shuffle or hashed_seed is None:
         os_psg = group_positives[0]
     else:
         pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
-    encoded_passages.append(encode_fun(pos_psg))
+    encoded_passages.append(encode_fn(pos_psg))
+
     negative_size = data_args.train_n_passages - 1
     if len(group_negatives) < negative_size:
         if hashed_seed is not None:
@@ -99,22 +47,108 @@ def build_one_data(example,encode_fun,hashed_seed,epoch,data_args):
         negs = negs[_offset: _offset + negative_size]
 
     for neg_psg in negs:
-            encoded_passages.append(encode_fun(neg_psg))
+        encoded_passages.append(encode_fn(neg_psg))
 
     assert len(encoded_passages) == data_args.train_n_passages
 
-    return {"query": encoded_query, "passages": encoded_passages}    
+    return {"query": encoded_query, "passages": encoded_passages}
 
-class DRTrainDataset(TrainDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        
-        super(DRTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+class TrainDatasetBase:
+    '''
+    Abstract base class for all train datasets in Openmatch.\n
+    This implants arguments and data preparation, but should be mostly used for identifying an OpenMatch Train Dataset.\n
+    All future dataset ABCs would subclass this and `(Iterable)Dataset`.
+    '''
+
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None, 
+        cache_dir: str = None
+    ) -> None:
+        self._prepare_data(data_args, shuffle_seed, cache_dir)
+        self.tokenizer = tokenizer
+        self.data_args = data_args
+        self.q_max_len = data_args.q_max_len
+        self.p_max_len = data_args.p_max_len
+        self.trainer = trainer
 
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
-        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(os.path.join(data_args.train_dir, "*.jsonl"))
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
-        self.dataset = self.dataset.shuffle(seed=shuffle_seed, buffer_size=10_000) if shuffle_seed is not None else self.dataset
+        self.data_files = None
+        self.dataset = None
+
+
+class StreamTrainDataset(TrainDatasetBase, IterableDataset):
+
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None, 
+        cache_dir: str = None
+    ) -> None:
+        super(StreamTrainDataset, self).__init__(
+            tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+
+    def __len__(self):
+        concat_filenames = " ".join(self.data_files)
+        count = 0
+        with os.popen("wc -l {}".format(concat_filenames)) as f:
+            for line in f:
+                lc, filename = line.strip().split()
+                lc = int(lc)
+                if filename != "total":
+                    count += lc
+        return count
+
+    def __iter__(self):
+        raise NotImplementedError
+
+
+class MappingTrainDataset(TrainDatasetBase, Dataset):
+
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None, 
+        cache_dir: str = None
+    ) -> None:
+        super(MappingTrainDataset, self).__init__(
+            tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        raise NotImplementedError
+
+
+class StreamDRTrainDataset(StreamTrainDataset):
+
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None, 
+        cache_dir: str = None
+    ) -> None:
+        super(StreamDRTrainDataset, self).__init__(
+            tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+
+    def _prepare_data(self, data_args, shuffle_seed, cache_dir):
+        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(
+            os.path.join(data_args.train_dir, "*.jsonl"))
+        self.dataset = load_dataset(
+            "json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
+        self.dataset = self.dataset.shuffle(
+            seed=shuffle_seed, buffer_size=10_000) if shuffle_seed is not None else self.dataset
 
     def create_one_example(self, text_encoding: List[int], is_query=False):
         item = self.tokenizer.encode_plus(
@@ -128,9 +162,9 @@ class DRTrainDataset(TrainDataset):
         return item
 
     def get_process_fn(self, epoch, hashed_seed):
-        
+
         def process_fn(example):
-            return build_one_data(example,self.create_one_example,hashed_seed,epoch,self.data_args)
+            return build_one_data(example, self.create_one_example, hashed_seed, epoch, self.data_args)
 
         return process_fn
 
@@ -140,15 +174,27 @@ class DRTrainDataset(TrainDataset):
         self.dataset.set_epoch(epoch)
         return iter(self.dataset.map(self.get_process_fn(epoch, _hashed_seed), remove_columns=["positives", "negatives"]))
 
-class DRMappingTrainDataset(MappingTrainDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None,shuffle_seed = None, cache_dir: str = None) -> None:
+class MappingDRTrainDataset(MappingTrainDataset):
+
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None,
+        cache_dir: str = None
+    ) -> None:
         # No shuffle seed is needed for mapping datasets, but were keeped to maintain interface
-        super(DRMappingTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+        super(MappingDRTrainDataset, self).__init__(
+            tokenizer, data_args, trainer, shuffle_seed, cache_dir)
 
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
-        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(os.path.join(data_args.train_dir, "*.jsonl"))
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=False, cache_dir=cache_dir)["train"]
+        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(
+            os.path.join(data_args.train_dir, "*.jsonl"))
+        self.dataset = load_dataset(
+            "json", data_files=self.data_files, streaming=False, cache_dir=cache_dir)["train"]
+
     def create_one_example(self, text_encoding: List[int], is_query=False):
         item = self.tokenizer.encode_plus(
             text_encoding,
@@ -159,38 +205,56 @@ class DRMappingTrainDataset(MappingTrainDataset):
             return_token_type_ids=False,
         )
         return item
-    def __getitem__(self, item) :
+
+    def __getitem__(self, item):
         group = self.dataset[item]
         epoch = int(self.trainer.state.epoch)
-        
+
         _hashed_seed = hash(item + self.trainer.args.seed)
-        return build_one_data(group,self.create_one_example,_hashed_seed,epoch,self.data_args)
+        return build_one_data(group, self.create_one_example, _hashed_seed, epoch, self.data_args)
 
 
+class StreamDREvalDataset(StreamDRTrainDataset):
 
-class DREvalDataset(DRTrainDataset):
-
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, cache_dir: str = None) -> None:
-        super(DREvalDataset, self).__init__(tokenizer, data_args, None, cache_dir=cache_dir)
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        cache_dir: str = None
+    ) -> None:
+        super(StreamDREvalDataset, self).__init__(
+            tokenizer, data_args, cache_dir=cache_dir)
 
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
         self.data_files = [data_args.eval_path]
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
+        self.dataset = load_dataset(
+            "json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
 
     def __iter__(self):
         return iter(self.dataset.map(self.get_process_fn(0, None), remove_columns=["positives", "negatives"]))
 
 
-class RRTrainDataset(TrainDataset):
+class StreamRRTrainDataset(StreamTrainDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, trainer: DRTrainer = None, shuffle_seed: int = None, cache_dir: str = None) -> None:
-        super(RRTrainDataset, self).__init__(tokenizer, data_args, trainer, shuffle_seed, cache_dir)
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        trainer: DRTrainer = None, 
+        shuffle_seed: int = None, 
+        cache_dir: str = None
+    ) -> None:
+        super(StreamRRTrainDataset, self).__init__(
+            tokenizer, data_args, trainer, shuffle_seed, cache_dir)
         self.neg_num = 1
 
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
-        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(os.path.join(data_args.train_dir, "*.jsonl"))
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
-        self.dataset = self.dataset.shuffle(seed=shuffle_seed, buffer_size=10_000) if shuffle_seed is not None else self.dataset
+        self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(
+            os.path.join(data_args.train_dir, "*.jsonl"))
+        self.dataset = load_dataset(
+            "json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
+        self.dataset = self.dataset.shuffle(
+            seed=shuffle_seed, buffer_size=10_000) if shuffle_seed is not None else self.dataset
 
     def create_one_example(self, qry_encoding, psg_encoding):
         item = self.tokenizer.encode_plus(
@@ -204,7 +268,7 @@ class RRTrainDataset(TrainDataset):
         return item
 
     def get_process_fn(self, epoch, hashed_seed):
-        
+
         def process_fn(example):
             qry = example['query']
             group_positives = example['positives']
@@ -213,13 +277,15 @@ class RRTrainDataset(TrainDataset):
             if self.data_args.positive_passage_no_shuffle or hashed_seed is None:
                 pos_psg = group_positives[0]
             else:
-                pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
+                pos_psg = group_positives[(
+                    hashed_seed + epoch) % len(group_positives)]
             encoded_pos_pair = self.create_one_example(qry, pos_psg)
 
             if hashed_seed is None:
                 neg_psg = group_negatives[0]
             else:
-                neg_psg = group_negatives[(hashed_seed + epoch) % len(group_negatives)]
+                neg_psg = group_negatives[(
+                    hashed_seed + epoch) % len(group_negatives)]
             encoded_neg_pair = self.create_one_example(qry, neg_psg)
             return {"pos_pair": encoded_pos_pair, "neg_pair": encoded_neg_pair}
 
@@ -232,14 +298,21 @@ class RRTrainDataset(TrainDataset):
         return iter(self.dataset.map(self.get_process_fn(epoch, _hashed_seed), remove_columns=["positives", "negatives"]))
 
 
-class RREvalDataset(RRTrainDataset):
+class StreamRREvalDataset(StreamRRTrainDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, cache_dir: str = None) -> None:
-        super(RREvalDataset, self).__init__(tokenizer, data_args, None, cache_dir=cache_dir)
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        cache_dir: str = None
+    ) -> None:
+        super(StreamRREvalDataset, self).__init__(
+            tokenizer, data_args, cache_dir=cache_dir)
 
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
         self.data_files = [data_args.eval_path]
-        self.dataset = load_dataset("json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
+        self.dataset = load_dataset(
+            "json", data_files=self.data_files, streaming=True, cache_dir=cache_dir)["train"]
 
     def __iter__(self):
         return iter(self.dataset.map(self.get_process_fn(0, None), remove_columns=["positives", "negatives"]))
