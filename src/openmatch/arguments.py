@@ -88,33 +88,11 @@ class DataArguments:
     corpus_path: str = field(
         default=None, metadata={"help": "Path to corpus file"}
     )
-    data_dir: str = field(
-        default=None, metadata={"help": "Path to data directory"}
-    )
-    data_path: str = field(
-        default=None, metadata={"help": "Path to the single data file"}
-    )
-    processed_data_path: str = field(
-        default=None, metadata={"help": "Path to processed data directory"}
-    )
-    dataset_name: str = field(
-        default=None, metadata={"help": "huggingface dataset name"}
-    )
-    passage_field_separator: str = field(default=' ')
-    dataset_proc_num: int = field(
-        default=12, metadata={"help": "number of proc used in dataset preprocess"}
-    )
     train_n_passages: int = field(default=8)
     positive_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first positive passage"})
     negative_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first negative passages"})
-
-    encode_in_path: List[str] = field(default=None, metadata={"help": "Path to data to encode"})
-    
-    encode_is_qry: bool = field(default=False)
-    encode_num_shard: int = field(default=1)
-    encode_shard_index: int = field(default=0)
 
     q_max_len: int = field(
         default=32,
@@ -140,7 +118,7 @@ class DataArguments:
         metadata={"help": "template for query"}
     )
     query_column_names: str = field(
-        default="id,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
     doc_template: str = field(
@@ -148,7 +126,7 @@ class DataArguments:
         metadata={"help": "template for doc"}
     )
     doc_column_names: str = field(
-        default="id,title,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
 
@@ -192,3 +170,6 @@ class InferenceArguments(TrainingArguments):
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
     retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
+
+
+    max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})
