@@ -355,7 +355,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.train_dr  \
     --num_train_epochs 3  \
     --logging_dir ${LOG_PATH} \ # Path to save tensorboard datas
     --use_mapping_dataset \ # Important!
-    --drop_last \ # Whether dropping last incomplete batch
+    --dataloader_drop_last \ # Whether dropping last incomplete batch
 
 ```
 
@@ -365,7 +365,7 @@ Notes:
   
   * However, huggingface datasets would generate a cache in `~/.cache` with the same size as training data does. If you're running low on disk space here, you may specify `--cache_dir ${CACHE_DIR}` to save the cache to somewhere else.
 
-* Be aware that a linear warm-up stage with length of 10% of all training steps is used in training; thus, the number of training epoch defined and `--drop_last` may have an impact on all checkpoints generated.
+* Be aware that a linear warm-up stage with length of 10% of all training steps is used in training; thus, the number of training epoch defined and `--dataloader_drop_last` may have an impact on all checkpoints generated.
 
 * Since this implantation uses the 20000-step checkpoint to mine the next episode's negatives, you may want to stop the train as early as 20000 steps. However, because of the warm-up stage, you should still set the training epoch to 3 to avoid difference in learning rates.
 

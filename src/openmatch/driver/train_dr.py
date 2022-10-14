@@ -7,7 +7,7 @@ import sys
 from openmatch.arguments import DataArguments
 from openmatch.arguments import DRTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
-from openmatch.dataset import QPCollator, DRTrainDataset,DRMappingTrainDataset , DREvalDataset
+from openmatch.dataset import QPCollator, StreamDRTrainDataset,MappingDRTrainDataset , StreamDREvalDataset
 from openmatch.modeling import DRModel
 from openmatch.trainer import DRTrainer as Trainer
 from openmatch.trainer import GCDenseTrainer
@@ -75,9 +75,9 @@ def main():
         config=config,
         cache_dir=model_args.cache_dir,
     )
-    TrainDatasetClass = DRMappingTrainDataset if training_args.use_mapping_dataset else DRTrainDataset
+    TrainDatasetClass = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset
     train_dataset = TrainDatasetClass(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
-    eval_dataset = DREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
+    eval_dataset = StreamDREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
 
     tb_callback = TensorBoardCallback()
 

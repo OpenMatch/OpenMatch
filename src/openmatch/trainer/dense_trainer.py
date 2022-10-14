@@ -73,7 +73,7 @@ class DRTrainer(Trainer):
                 train_dataset = IterableDatasetShard(
                     train_dataset,
                     batch_size=self.args.train_batch_size,
-                    drop_last=self.args.drop_last,
+                    drop_last=self.args.dataloader_drop_last,
                     num_processes=self.args.world_size,
                     process_index=self.args.process_index,
                 )
@@ -82,7 +82,7 @@ class DRTrainer(Trainer):
                 train_dataset,
                 batch_size=self.args.per_device_train_batch_size,
                 collate_fn=self.data_collator,
-                drop_last=self.args.drop_last,
+                drop_last=self.args.dataloader_drop_last,
                 num_workers=self.args.dataloader_num_workers,
                 pin_memory=self.args.dataloader_pin_memory,
             )
@@ -94,7 +94,7 @@ class DRTrainer(Trainer):
             batch_size=self.args.train_batch_size,
             sampler=train_sampler,
             collate_fn=self.data_collator,
-            drop_last=self.args.drop_last,
+            drop_last=self.args.dataloader_drop_last,
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
         )
