@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -8,6 +9,8 @@ from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -20,12 +23,33 @@ def main():
         data_args: DataArguments
         encoding_args: EncodingArguments
 
-    num_labels = 1
-    config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        num_labels=num_labels,
-        cache_dir=model_args.cache_dir,
+    # Setup logging
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        level=logging.INFO if encoding_args.local_rank in [-1, 0] else logging.WARN,
     )
+    logger.warning(
+        "Process rank: %s, device: %s, n_gpu: %s, distributed inference: %s, 16-bits inference: %s",
+        encoding_args.local_rank,
+        encoding_args.device,
+        encoding_args.n_gpu,
+        bool(encoding_args.local_rank != -1),
+        encoding_args.fp16,
+    )
+    logger.info("Encoding parameters %s", encoding_args)
+    logger.info("MODEL parameters %s", model_args)
+
+    num_labels = 1
+    try:
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            cache_dir=model_args.cache_dir,
+        )
+    except OSError:
+        config = None
+    
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,

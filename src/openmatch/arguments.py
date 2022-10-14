@@ -88,33 +88,11 @@ class DataArguments:
     corpus_path: str = field(
         default=None, metadata={"help": "Path to corpus file"}
     )
-    data_dir: str = field(
-        default=None, metadata={"help": "Path to data directory"}
-    )
-    data_path: str = field(
-        default=None, metadata={"help": "Path to the single data file"}
-    )
-    processed_data_path: str = field(
-        default=None, metadata={"help": "Path to processed data directory"}
-    )
-    dataset_name: str = field(
-        default=None, metadata={"help": "huggingface dataset name"}
-    )
-    passage_field_separator: str = field(default=' ')
-    dataset_proc_num: int = field(
-        default=12, metadata={"help": "number of proc used in dataset preprocess"}
-    )
     train_n_passages: int = field(default=8)
     positive_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first positive passage"})
     negative_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first negative passages"})
-
-    encode_in_path: List[str] = field(default=None, metadata={"help": "Path to data to encode"})
-    
-    encode_is_qry: bool = field(default=False)
-    encode_num_shard: int = field(default=1)
-    encode_shard_index: int = field(default=0)
 
     q_max_len: int = field(
         default=32,
@@ -140,7 +118,7 @@ class DataArguments:
         metadata={"help": "template for query"}
     )
     query_column_names: str = field(
-        default="id,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
     doc_template: str = field(
@@ -148,7 +126,7 @@ class DataArguments:
         metadata={"help": "template for doc"}
     )
     doc_column_names: str = field(
-        default="id,title,text",
+        default=None,
         metadata={"help": "column names for the tsv data format"}
     )
 
@@ -161,10 +139,11 @@ class DRTrainingArguments(TrainingArguments):
     )
     negatives_x_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
     do_encode: bool = field(default=False, metadata={"help": "run the encoding loop"})
-
+    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
+    drop_last: bool = field(default=False,metadata={"help":"Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
 
 
 @dataclass
@@ -185,8 +164,11 @@ class InferenceArguments(TrainingArguments):
     use_gpu: bool = field(default=False, metadata={"help": "Use GPU for Faiss retrieval"})
     encoded_save_path: str = field(default=None, metadata={"help": "where to save the encode"})
     trec_save_path: str = field(default=None, metadata={"help": "where to save the trec file"})
-
+    encode_query_as_passage: bool = field(default=False, metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
+    retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
+
+    max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})

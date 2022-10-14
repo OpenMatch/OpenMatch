@@ -7,7 +7,7 @@ import sys
 from openmatch.arguments import DataArguments
 from openmatch.arguments import RRTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
-from openmatch.dataset import PairCollator, RRTrainDataset, RREvalDataset
+from openmatch.dataset import PairCollator, StreamRRTrainDataset, StreamRREvalDataset
 from openmatch.modeling import RRModel
 from openmatch.trainer import RRTrainer as Trainer
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
@@ -76,8 +76,8 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    train_dataset = RRTrainDataset(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
-    eval_dataset = RREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
+    train_dataset = StreamRRTrainDataset(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
+    eval_dataset = StreamRREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
 
     tb_callback = TensorBoardCallback()
 
