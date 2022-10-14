@@ -88,33 +88,11 @@ class DataArguments:
     corpus_path: str = field(
         default=None, metadata={"help": "Path to corpus file"}
     )
-    data_dir: str = field(
-        default=None, metadata={"help": "Path to data directory"}
-    )
-    data_path: str = field(
-        default=None, metadata={"help": "Path to the single data file"}
-    )
-    processed_data_path: str = field(
-        default=None, metadata={"help": "Path to processed data directory"}
-    )
-    dataset_name: str = field(
-        default=None, metadata={"help": "huggingface dataset name"}
-    )
-    passage_field_separator: str = field(default=' ')
-    dataset_proc_num: int = field(
-        default=12, metadata={"help": "number of proc used in dataset preprocess"}
-    )
     train_n_passages: int = field(default=8)
     positive_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first positive passage"})
     negative_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first negative passages"})
-
-    encode_in_path: List[str] = field(default=None, metadata={"help": "Path to data to encode"})
-    
-    encode_is_qry: bool = field(default=False)
-    encode_num_shard: int = field(default=1)
-    encode_shard_index: int = field(default=0)
 
     q_max_len: int = field(
         default=32,
