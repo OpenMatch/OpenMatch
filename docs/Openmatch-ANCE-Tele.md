@@ -1,4 +1,4 @@
-# Reproducing ANCETele Results in OpenMatch
+# Reproducing ANCE-Tele Results in OpenMatch
 
 OpenMatch has added support for ANCETele method of training dense retrieval models.
 
