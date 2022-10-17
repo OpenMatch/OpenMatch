@@ -21,7 +21,7 @@ def build_one_data(example, encode_fn, hashed_seed, epoch, data_args):
     group_negatives = example['negatives']
 
     if data_args.positive_passage_no_shuffle or hashed_seed is None:
-        os_psg = group_positives[0]
+        pos_psg = group_positives[0]
     else:
         pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
     encoded_passages.append(encode_fn(pos_psg))
