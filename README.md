@@ -5,7 +5,7 @@ An all-in-one toolkit for information retrieval. Under active development.
 ## Install
 
 ```bash
-git clone https://github.com/thunlp/OpenMatch.git
+git clone https://github.com/OpenMatch/OpenMatch.git
 cd OpenMatch
 pip install -e .
 ```
