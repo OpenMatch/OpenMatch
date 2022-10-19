@@ -53,15 +53,12 @@ if __name__ == "__main__":
         stream=True
     )
 
-    random_crop_partial = partial(random_crop, ratio_min=other_args.ratio_min, ratio_max=other_args.ratio_max)
-    with Pool(other_args.num_workers) as p:
-        contents = list(tqdm(p.imap(random_crop_partial, corpus_dataset)))
-
     save_dir = os.path.split(other_args.save_to)[0]
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
+    random_crop_partial = partial(random_crop, ratio_min=other_args.ratio_min, ratio_max=other_args.ratio_max)
     with open(other_args.save_to, 'w') as f:
-        for result in tqdm(contents):
-            f.write(json.dumps(result))
-            f.write("\n")
+        with Pool(other_args.num_workers) as p:
+            for item in tqdm(p.imap(random_crop_partial, corpus_dataset)):
+                f.write(json.dumps(item) + "\n")
