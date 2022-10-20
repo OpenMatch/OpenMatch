@@ -26,7 +26,9 @@ You may also need faiss for dense retrieval. You can install either `faiss-cpu` 
 
 ## Docs
 
-See docs folder.
+[![Documentation Status](https://readthedocs.org/projects/openmatch/badge/?version=latest)](https://openmatch.readthedocs.io/en/latest/?badge=latest)
+
+We are actively working on the docs.
 
 ## Project Organizers
 
