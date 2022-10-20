@@ -12,7 +12,6 @@ from openmatch.modeling import DRModel
 from openmatch.trainer import DRTrainer as Trainer
 from openmatch.trainer import GCDenseTrainer
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
-from transformers.integrations import TensorBoardCallback
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +78,6 @@ def main():
     train_dataset = TrainDatasetClass(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
     eval_dataset = StreamDREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
 
-    tb_callback = TensorBoardCallback()
-
     trainer_cls = GCDenseTrainer if training_args.grad_cache else Trainer
     trainer = trainer_cls(
         model=model,
@@ -93,7 +90,6 @@ def main():
             max_p_len=data_args.p_max_len,
             max_q_len=data_args.q_max_len
         ),
-        callbacks=[tb_callback]
     )
     train_dataset.trainer = trainer
 

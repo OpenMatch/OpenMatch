@@ -11,7 +11,6 @@ from openmatch.dataset import PairCollator, StreamRRTrainDataset, StreamRREvalDa
 from openmatch.modeling import RRModel
 from openmatch.trainer import RRTrainer as Trainer
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
-from transformers.integrations import TensorBoardCallback
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +78,6 @@ def main():
     train_dataset = StreamRRTrainDataset(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
     eval_dataset = StreamRREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
 
-    tb_callback = TensorBoardCallback()
-
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -92,7 +89,6 @@ def main():
             max_p_len=data_args.p_max_len,
             max_q_len=data_args.q_max_len
         ),
-        callbacks=[tb_callback]
     )
     train_dataset.trainer = trainer
 
