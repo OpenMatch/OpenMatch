@@ -87,7 +87,7 @@ class InferenceDataset():
             truncation=True, 
             max_length=self.max_len, 
             return_attention_mask=self.final, 
-            return_token_type_ids=self.final
+            return_token_type_ids=False
         )
         return {"text_id": example_id, **tokenized}
 
