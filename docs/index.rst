@@ -10,9 +10,11 @@ Welcome to OpenMatch's documentation!
    :maxdepth: 1
    :caption: Contents:
 
-   dr-msmarco-passage.md
-   rr-msmarco-passage.md
-   Openmatch-ANCE-Tele.md
+   dr-msmarco-passage
+   rr-msmarco-passage
+   Openmatch-ANCE-Tele
+   model_downloads
+   scale-t5-weights
    
 
 
