@@ -1,12 +1,10 @@
-# Trained Models
+# T5-ANCE
 
-## T5-ANCE
+## Download
 
-### Download
+On Hugging Face: [OpenMatch/t5-ance](https://huggingface.co/OpenMatch/t5-ance)
 
-- [Click here to download](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/v2/t5-ance.tar.gz)
-
-### Information
+## Information
 
 T5-ANCE generally follows the training procedure described in [this page](dr-msmarco-passage.md), but uses a much larger batch size.
 
@@ -30,6 +28,6 @@ Important hyper-parameters:
 |Template for query|`<text>`|
 |Template for document|`Title: <title> Text: <text>`|
 
-### Paper
+## Paper
 
 \-
