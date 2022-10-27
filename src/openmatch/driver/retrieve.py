@@ -75,7 +75,7 @@ def main():
     )
 
     retriever = Retriever.from_embeddings(model, encoding_args)
-    result = retriever.retrieve(query_dataset,encoding_args.retrieve_depth)
+    result = retriever.retrieve(query_dataset, encoding_args.retrieve_depth)
     if encoding_args.local_process_index == 0:
         save_as_trec(result, encoding_args.trec_save_path)
 

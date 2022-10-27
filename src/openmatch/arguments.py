@@ -169,6 +169,6 @@ class InferenceArguments(TrainingArguments):
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
-    retrieve_depth: int = field(default = 100, metadata={"help":"number of relative documents to retrieve in retriever"})
+    retrieve_depth: int = field(default=100, metadata={"help":"number of documents to retrieve in retriever"})
 
     max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})
