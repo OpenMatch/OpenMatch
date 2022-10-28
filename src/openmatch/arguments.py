@@ -114,7 +114,7 @@ class DataArguments:
 
 
     query_template: str = field(
-        default="<text>",
+        default=None,
         metadata={"help": "template for query"}
     )
     query_column_names: str = field(
@@ -122,12 +122,16 @@ class DataArguments:
         metadata={"help": "column names for the tsv data format"}
     )
     doc_template: str = field(
-        default="Title: <title> Text: <text>",
+        default=None,
         metadata={"help": "template for doc"}
     )
     doc_column_names: str = field(
         default=None,
         metadata={"help": "column names for the tsv data format"}
+    )
+    all_markers: str = field(
+        default=None,
+        metadata={"help": "all markers in the template"}
     )
 
 
@@ -144,6 +148,28 @@ class DRTrainingArguments(TrainingArguments):
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
     drop_last: bool = field(default=False,metadata={"help":"Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
+
+
+@dataclass
+class DRPretrainingDataArguments(DataArguments):
+    train_n_passages: int = field(default=1)
+    pretrain_strategies: str = field(
+        default="crop",
+        metadata={"help": "pretraining strategies"}
+    )
+    pretrain_target_field: str = field(
+        default="text",
+        metadata={"help": "pretraining target field"}
+    )
+
+    cropping_ratio_min: float = field(
+        default=0.1,
+        metadata={"help": "Minimum ratio of the cropped span to the original document span"}
+    )
+    cropping_ratio_max: float = field(
+        default=0.5,
+        metadata={"help": "Maximum ratio of the cropped span to the original document span"}
+    )
 
 
 @dataclass

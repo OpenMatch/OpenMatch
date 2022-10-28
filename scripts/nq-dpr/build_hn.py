@@ -77,14 +77,14 @@ query_dataset = InferenceDataset.load(
     tokenizer=tokenizer,
     data_args=data_args,
     is_query=True,
-    final=False,
+    full_tokenization=False,
     stream=False
 )
 corpus_dataset = InferenceDataset.load(
     tokenizer=tokenizer,
     data_args=data_args,
     is_query=False,
-    final=False,
+    full_tokenization=False,
     stream=False
 )
 qrel = read_qrel(other_args.qrels_file)

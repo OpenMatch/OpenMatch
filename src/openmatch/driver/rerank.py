@@ -63,7 +63,7 @@ def main():
     query_dataset = InferenceDataset.load(
         tokenizer=tokenizer,
         data_args=data_args,
-        final=False,
+        full_tokenization=False,
         is_query=True,
         stream=False,
         cache_dir=model_args.cache_dir
@@ -72,7 +72,7 @@ def main():
     corpus_dataset = InferenceDataset.load(
         tokenizer=tokenizer,
         data_args=data_args,
-        final=False,
+        full_tokenization=False,
         is_query=False,
         stream=False,
         cache_dir=model_args.cache_dir
