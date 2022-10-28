@@ -104,7 +104,7 @@ class InferenceDataset():
             example_id = get_idx(example)
             tokenized = {}
             for marker in self.all_markers:
-                tokenized[marker] = dict(self._tokenize(example[marker])) if marker in example else None
+                tokenized[marker] = dict(self._tokenize(example[marker])) if (marker in example and example[marker] is not None) else None
             return {"text_id": example_id, **tokenized}
         else:
             example_id = get_idx(example)

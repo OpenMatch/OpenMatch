@@ -151,6 +151,28 @@ class DRTrainingArguments(TrainingArguments):
 
 
 @dataclass
+class DRPretrainingDataArguments(DataArguments):
+    train_n_passages: int = field(default=1)
+    pretrain_strategies: str = field(
+        default="crop",
+        metadata={"help": "pretraining strategies"}
+    )
+    pretrain_target_field: str = field(
+        default="text",
+        metadata={"help": "pretraining target field"}
+    )
+
+    cropping_ratio_min: float = field(
+        default=0.1,
+        metadata={"help": "Minimum ratio of the cropped span to the original document span"}
+    )
+    cropping_ratio_max: float = field(
+        default=0.5,
+        metadata={"help": "Maximum ratio of the cropped span to the original document span"}
+    )
+
+
+@dataclass
 class RRTrainingArguments(TrainingArguments):
     warmup_ratio: float = field(default=0.1)
     remove_unused_columns: Optional[bool] = field(
