@@ -69,6 +69,10 @@ class ModelArguments:
         default=False,
         metadata={"help": "Whether to normalize the embeddings"}
     )
+    param_efficient_method: Optional[str] = field(
+        default=None,
+        metadata={"help": "Param efficient method used in model training"}
+    )
 
 
 @dataclass

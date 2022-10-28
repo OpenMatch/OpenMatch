@@ -10,8 +10,9 @@ from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
-logger = logging.getLogger(__name__)
+from opendelta import AdapterModel, PrefixModel, LoraModel, Visualization, BitFitModel
 
+logger = logging.getLogger(__name__)
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
@@ -60,6 +61,29 @@ def main():
         config=config,
         cache_dir=model_args.cache_dir,
     )
+
+    model_vis = Visualization(model)
+    model_vis.structure_graph()
+
+    if model_args.param_efficient_method == "bitfit":
+        delta_model = BitFitModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        delta_model.log()
+        print("using bitfit")
+    
+    elif model_args.param_efficient_method == "adapter":
+        delta_model = AdapterModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        delta_model.log()
+        print("using adapter")
+
+    elif model_args.param_efficient_method == "prefix_tuning":
+        delta_model = PrefixModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        delta_model.log()
+        print("using prefix tuning")
+
+    elif model_args.param_efficient_method == "lora":
+        delta_model = LoraModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        delta_model.log()
+        print("using lora")
 
     corpus_dataset = InferenceDataset.load(
         tokenizer=tokenizer,

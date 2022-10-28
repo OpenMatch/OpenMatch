@@ -13,6 +13,8 @@ from openmatch.trainer import DRTrainer as Trainer
 from openmatch.trainer import GCDenseTrainer
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
 
+from opendelta import BitFitModel, AdapterModel, PrefixModel, SoftPromptModel, LoraModel, Visualization
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,27 +76,78 @@ def main():
         config=config,
         cache_dir=model_args.cache_dir,
     )
+
+    model_vis = Visualization(model)
+    model_vis.structure_graph()
+
+    if model_args.param_efficient_method == "bitfit":
+        delta_model = BitFitModel(model, modified_modules=["encoder"])
+        delta_model.freeze_module(set_state_dict=True)
+        delta_model.log()
+        print("using bitfit")
+    
+    elif model_args.param_efficient_method == "adapter":
+        delta_model = AdapterModel(model)
+        delta_model.freeze_module(set_state_dict=True)
+        delta_model.log()
+        print("using adapter")
+
+    elif model_args.param_efficient_method == "prefix_tuning":
+        delta_model = PrefixModel(model)
+        delta_model.freeze_module(set_state_dict=True)
+        delta_model.log()
+        print("using prefix tuning")
+
+    elif model_args.param_efficient_method == "prompt":
+        delta_model = SoftPromptModel(model)
+        delta_model.freeze_module(set_state_dict=True)
+        delta_model.log()
+        print("using prompt tuning")
+
+    elif model_args.param_efficient_method == "lora":
+        delta_model = LoraModel(model)
+        delta_model.freeze_module(set_state_dict=True)
+        delta_model.log()
+        print("using lora")
+
     TrainDatasetClass = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset
     train_dataset = TrainDatasetClass(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
     eval_dataset = StreamDREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
 
     trainer_cls = GCDenseTrainer if training_args.grad_cache else Trainer
-    trainer = trainer_cls(
-        model=model,
-        args=training_args,
-        tokenizer=tokenizer,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        data_collator=QPCollator(
-            tokenizer,
-            max_p_len=data_args.p_max_len,
-            max_q_len=data_args.q_max_len
-        ),
-    )
+    if model_args.param_efficient_method:
+        trainer = trainer_cls(
+            model=model,
+            args=training_args,
+            tokenizer=tokenizer,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            data_collator=QPCollator(
+                tokenizer,
+                max_p_len=data_args.p_max_len,
+                max_q_len=data_args.q_max_len
+            ),
+            delta_model=delta_model
+        )
+    else:
+        trainer = trainer_cls(
+            model=model,
+            args=training_args,
+            tokenizer=tokenizer,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            data_collator=QPCollator(
+                tokenizer,
+                max_p_len=data_args.p_max_len,
+                max_q_len=data_args.q_max_len
+            ),
+        )
     train_dataset.trainer = trainer
 
     trainer.train()
     trainer.save_model()
+    if model_args.param_efficient_method:
+        delta_model.save_finetuned(training_args.output_dir + "/delta_model")
     if trainer.is_world_process_zero():
         tokenizer.save_pretrained(training_args.output_dir)
 

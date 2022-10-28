@@ -25,8 +25,9 @@ except ModuleNotFoundError:
 
 
 class DRTrainer(Trainer):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, delta_model=None, *args, **kwargs):
         super(DRTrainer, self).__init__(*args, **kwargs)
+        self.delta_model = delta_model
         self._dist_loss_scale_factor = dist.get_world_size() if self.args.negatives_x_device else 1
 
     def _save(self, output_dir: Optional[str] = None):
@@ -39,6 +40,10 @@ class DRTrainer(Trainer):
 
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+
+        if self.delta_model:
+            print("Saving delta model to %s", output_dir + "/delta_model")
+            self.delta_model.save_finetuned(output_dir + "/delta_model")
 
     def _prepare_inputs(
             self,
