@@ -1,17 +1,15 @@
 import logging
 import os
 import sys
-import torch
+
 from openmatch.arguments import DataArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
-from openmatch.utils import save_as_trec
+from openmatch.utils import save_as_trec, get_delta_model_class
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
-
-from opendelta import BitFitModel, AdapterModel, PrefixModel, SoftPromptModel, LoraModel, Visualization
 
 logger = logging.getLogger(__name__)
 
@@ -65,28 +63,10 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    model_vis = Visualization(model)
-    model_vis.structure_graph()
-
-    if model_args.param_efficient_method == "bitfit":
-        delta_model = BitFitModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
-        delta_model.log()
-        print("using bitfit")
-    
-    elif model_args.param_efficient_method == "adapter":
-        delta_model = AdapterModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
-        delta_model.log()
-        print("using adapter")
-
-    elif model_args.param_efficient_method == "prefix_tuning":
-        delta_model = PrefixModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
-        delta_model.log()
-        print("using prefix tuning")
-
-    elif model_args.param_efficient_method == "lora":
-        delta_model = LoraModel.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
-        delta_model.log()
-        print("using lora")
+    if model_args.param_efficient_method:
+        model_class = get_delta_model_class(model_args.param_efficient_method)
+        delta_model = model_class.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        logger.info("Using param efficient method: %s", model_args.param_efficient_method)
 
     query_dataset = InferenceDataset.load(
         tokenizer=tokenizer,
