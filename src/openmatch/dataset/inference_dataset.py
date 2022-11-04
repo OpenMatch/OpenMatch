@@ -31,7 +31,7 @@ class InferenceDataset():
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
-        filter_fn: Callable = None,
+        filter_fn: Callable = lambda x: True,
         cache_dir: str = None
     ):
         self.cache_dir = cache_dir
@@ -53,7 +53,9 @@ class InferenceDataset():
         self.num_processes = num_processes
         self.process_index = process_index
 
-        self._prepare_data()
+        self.filter_fn = filter_fn
+
+        self._prepare_data(data_args)
 
     def _prepare_data(self, data_args):
         raise NotImplementedError
@@ -71,7 +73,7 @@ class InferenceDataset():
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
-        filter_fn: Callable = None,
+        filter_fn: Callable = lambda x: True,
         cache_dir: str = None
     ):
         if data_files is None:
@@ -80,7 +82,7 @@ class InferenceDataset():
             data_files = [data_files] if isinstance(data_files, str) else data_files
         ext = os.path.splitext(data_files[0])[1]
         ext_to_cls = {
-            ".json": StreamJsonlDataset if stream else MappingJsonlDataset,
+            ".jsonl": StreamJsonlDataset if stream else MappingJsonlDataset,
             ".tsv": StreamTsvDataset if stream else MappingTsvDataset,
             ".txt": StreamTsvDataset if stream else MappingTsvDataset,
         }

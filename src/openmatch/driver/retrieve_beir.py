@@ -24,6 +24,20 @@ def main():
         data_args: BEIRDataArguments
         encoding_args: EncodingArguments
 
+    if (
+        os.path.exists(encoding_args.output_dir)
+        and os.listdir(encoding_args.output_dir)
+    ):
+        if not encoding_args.overwrite_output_dir:
+            raise ValueError(
+                f"Output directory ({encoding_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
+            )
+        else:
+            # remove all files in the output directory
+            if encoding_args.local_process_index == 0:
+                for file in os.listdir(encoding_args.output_dir):
+                    os.remove(os.path.join(encoding_args.output_dir, file))
+
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
