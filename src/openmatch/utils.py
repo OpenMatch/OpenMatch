@@ -244,7 +244,7 @@ def mean_pooling(token_embeddings, attention_mask):
 def get_delta_model_class(model_type):
     if not _opendelta_available:
         raise ValueError(
-            'Opendelta package not available. You can obtain it from https://github.com/thunlp/OpenDelta.')
+            'OpenDelta package not available. You can obtain it from https://github.com/thunlp/OpenDelta.')
     delta_models = {
         'bitfit': BitFitModel,
         'adapter': AdapterModel,
