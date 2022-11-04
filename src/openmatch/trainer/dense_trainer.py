@@ -42,7 +42,7 @@ class DRTrainer(Trainer):
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
 
         if self.delta_model:
-            print("Saving delta model to %s", output_dir + "/delta_model")
+            logger.info("Saving delta model to %s", output_dir + "/delta_model")
             self.delta_model.save_finetuned(output_dir + "/delta_model")
 
     def _prepare_inputs(

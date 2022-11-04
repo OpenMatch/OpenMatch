@@ -78,10 +78,7 @@ def main():
 
     if model_args.param_efficient_method:
         model_class = get_delta_model_class(model_args.param_efficient_method)
-        if model_args.param_efficient_method == 'bitfit':
-            delta_model = model_class(model, modified_modules=['encoder'])
-        else:
-            delta_model = model_class(model)
+        delta_model = model_class(model)
         logger.info("Using param efficient method: %s", model_args.param_efficient_method)
 
     TrainDatasetClass = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset

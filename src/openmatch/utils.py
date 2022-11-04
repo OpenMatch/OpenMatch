@@ -241,7 +241,7 @@ def get_delta_model_class(model_type):
     delta_models = {
         'bitfit': BitFitModel,
         'adapter': AdapterModel,
-        'prefixtuning': PrefixModel,
+        'prefix': PrefixModel,
         'lora': LoraModel
     }
     return delta_models[model_type]

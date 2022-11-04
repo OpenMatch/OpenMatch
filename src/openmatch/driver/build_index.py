@@ -13,6 +13,7 @@ from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
 logger = logging.getLogger(__name__)
 
+
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
