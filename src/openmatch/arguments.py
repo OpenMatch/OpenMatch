@@ -136,6 +136,13 @@ class DataArguments:
 
 
 @dataclass
+class BEIRDataArguments(DataArguments):
+    data_dir: str = field(
+        default=None, metadata={"help": "Path to BEIR data directory"}
+    )
+
+
+@dataclass
 class DRTrainingArguments(TrainingArguments):
     warmup_ratio: float = field(default=0.1)
     remove_unused_columns: Optional[bool] = field(

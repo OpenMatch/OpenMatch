@@ -2,6 +2,7 @@
 
 import os
 from functools import lru_cache
+from typing import List, Union, Callable
 
 from datasets import load_dataset
 from torch.utils.data import Dataset, IterableDataset
@@ -23,17 +24,19 @@ class InferenceDataset():
         self, 
         tokenizer: PreTrainedTokenizer, 
         data_args: DataArguments, 
+        data_files: Union[str, List[str]],
         is_query: bool = False, 
         full_tokenization: bool = True, 
         mode: str = "processed",
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
+        filter_fn: Callable = None,
         cache_dir: str = None
     ):
         self.cache_dir = cache_dir
         self.is_query = is_query
-        self.data_files = [data_args.query_path] if self.is_query else [data_args.corpus_path]
+        self.data_files = data_files
         self.tokenizer = tokenizer
         self.max_len = data_args.q_max_len if self.is_query else data_args.p_max_len
 
@@ -50,11 +53,17 @@ class InferenceDataset():
         self.num_processes = num_processes
         self.process_index = process_index
 
+        self._prepare_data()
+
+    def _prepare_data(self, data_args):
+        raise NotImplementedError
+
     @classmethod
     def load(
         cls, 
         tokenizer: PreTrainedTokenizer, 
         data_args: DataArguments, 
+        data_files: Union[str, List[str]] = None,
         is_query: bool = False, 
         full_tokenization: bool = True, 
         mode: str = "processed",
@@ -62,9 +71,13 @@ class InferenceDataset():
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
+        filter_fn: Callable = None,
         cache_dir: str = None
     ):
-        data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
+        if data_files is None:
+            data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
+        else:
+            data_files = [data_files] if isinstance(data_files, str) else data_files
         ext = os.path.splitext(data_files[0])[1]
         ext_to_cls = {
             ".json": StreamJsonlDataset if stream else MappingJsonlDataset,
@@ -77,12 +90,14 @@ class InferenceDataset():
         return cls_(
             tokenizer=tokenizer, 
             data_args=data_args, 
+            data_files=data_files,
             is_query=is_query, 
             full_tokenization=full_tokenization, 
             mode=mode,
             batch_size=batch_size,
             num_processes=num_processes,
             process_index=process_index,
+            filter_fn=filter_fn,
             cache_dir=cache_dir
         )
 
@@ -119,9 +134,10 @@ class StreamInferenceDataset(InferenceDataset, IterableDataset):
         self, 
         tokenizer: PreTrainedTokenizer, 
         data_args: DataArguments, 
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(StreamInferenceDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(StreamInferenceDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
 
     def __iter__(self):
         real_batch_size = self.batch_size * self.num_processes
@@ -148,15 +164,18 @@ class StreamJsonlDataset(StreamInferenceDataset):
         self, 
         tokenizer: PreTrainedTokenizer,
         data_args: DataArguments,
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(StreamJsonlDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(StreamJsonlDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
+
+    def _prepare_data(self, data_args):
         self.dataset = load_dataset(
             "json", 
             data_files=self.data_files, 
             streaming=True, 
             cache_dir=self.cache_dir
-        )["train"]
+        )["train"].filter(self.filter_fn)
         sample = list(self.dataset.take(1))[0]
         self.all_columns = sample.keys()
 
@@ -167,9 +186,12 @@ class StreamTsvDataset(StreamInferenceDataset):
         self, 
         tokenizer: PreTrainedTokenizer,
         data_args: DataArguments,
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(StreamTsvDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(StreamTsvDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
+
+    def _prepare_data(self, data_args):
         self.all_columns = data_args.query_column_names if self.is_query else data_args.doc_column_names
         if self.all_columns is not None:
             self.all_columns = self.all_columns.split(',')
@@ -180,7 +202,7 @@ class StreamTsvDataset(StreamInferenceDataset):
             column_names=self.all_columns,
             delimiter='\t',
             cache_dir=self.cache_dir
-        )["train"]
+        )["train"].filter(self.filter_fn)
 
 
 class MappingInferenceDataset(InferenceDataset, Dataset):
@@ -189,9 +211,10 @@ class MappingInferenceDataset(InferenceDataset, Dataset):
         self, 
         tokenizer: PreTrainedTokenizer, 
         data_args: DataArguments, 
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(MappingInferenceDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(MappingInferenceDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
 
     @lru_cache(maxsize=None)
     def __getitem__(self, index):
@@ -210,15 +233,18 @@ class MappingJsonlDataset(MappingInferenceDataset):
         self, 
         tokenizer: PreTrainedTokenizer,
         data_args: DataArguments,
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(MappingJsonlDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(MappingJsonlDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
+    
+    def _prepare_data(self, data_args):
         hf_dataset = load_dataset(
             "json", 
             data_files=self.data_files, 
             streaming=True, 
             cache_dir=self.cache_dir
-        )["train"]
+        )["train"].filter(self.filter_fn)
         sample = list(self.dataset.take(1))[0]
         self.all_columns = sample.keys()
         self.dataset = {}
@@ -232,9 +258,12 @@ class MappingTsvDataset(MappingInferenceDataset):
         self, 
         tokenizer: PreTrainedTokenizer,
         data_args: DataArguments,
+        data_files: Union[str, List[str]],
         **kwargs
     ):
-        super(MappingTsvDataset, self).__init__(tokenizer, data_args, **kwargs)
+        super(MappingTsvDataset, self).__init__(tokenizer, data_args, data_files, **kwargs)
+    
+    def _prepare_data(self, data_args):
         self.all_columns = data_args.query_column_names if self.is_query else data_args.doc_column_names
         if self.all_columns is not None:
             self.all_columns = self.all_columns.split(',')
@@ -245,7 +274,7 @@ class MappingTsvDataset(MappingInferenceDataset):
             column_names=self.all_columns,
             delimiter='\t',
             cache_dir=self.cache_dir
-        )["train"]
+        )["train"].filter(self.filter_fn)
         self.dataset = {}
         for item in hf_dataset:
             self.dataset[get_idx(item)] = item

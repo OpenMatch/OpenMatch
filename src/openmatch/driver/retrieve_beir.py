@@ -1,8 +1,9 @@
+import logging
 import os
 import sys
 
 import pytrec_eval
-from openmatch.arguments import DataArguments
+from openmatch.arguments import BEIRDataArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import BEIRDataset
@@ -10,16 +11,35 @@ from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
+logger = logging.getLogger(__name__)
+
 
 def main():
-    parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
+    parser = HfArgumentParser((ModelArguments, BEIRDataArguments, EncodingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
-        data_args: DataArguments
+        data_args: BEIRDataArguments
         encoding_args: EncodingArguments
+
+    # Setup logging
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        level=logging.INFO if encoding_args.local_rank in [-1, 0] else logging.WARN,
+    )
+    logger.warning(
+        "Process rank: %s, device: %s, n_gpu: %s, distributed inference: %s, 16-bits inference: %s",
+        encoding_args.local_rank,
+        encoding_args.device,
+        encoding_args.n_gpu,
+        bool(encoding_args.local_rank != -1),
+        encoding_args.fp16,
+    )
+    logger.info("Encoding parameters %s", encoding_args)
+    logger.info("MODEL parameters %s", model_args)
 
     num_labels = 1
     config = AutoConfig.from_pretrained(
@@ -34,7 +54,6 @@ def main():
     )
 
     model = DRModelForInference.build(
-        model_name_or_path=model_args.model_name_or_path,
         model_args=model_args,
         config=config,
         cache_dir=model_args.cache_dir,
@@ -43,6 +62,10 @@ def main():
     beir_dataset = BEIRDataset(
         tokenizer=tokenizer,
         data_args=data_args,
+        stream=True,
+        batch_size=encoding_args.per_device_eval_batch_size,
+        num_processes=encoding_args.world_size,
+        process_index=encoding_args.process_index,
         cache_dir=model_args.cache_dir
     )
     # it = iter(beir_dataset.query_dataset)
@@ -55,12 +78,12 @@ def main():
     # exit(0)
 
     retriever = Retriever.build_all(model, beir_dataset.corpus_dataset, encoding_args)
-    run = retriever.query_embedding_inference(beir_dataset.query_dataset)
+    run = retriever.retrieve(beir_dataset.query_datasets["test"])
 
     if encoding_args.local_process_index == 0:
 
         evaluator = pytrec_eval.RelevanceEvaluator(
-        beir_dataset.qrel, {'ndcg_cut.10'})
+        beir_dataset.qrels["test"], {'ndcg_cut.10'})
         eval_results = evaluator.evaluate(run)
 
         def print_line(measure, scope, value):
