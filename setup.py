@@ -23,7 +23,6 @@ setuptools.setup(
     install_requires=[
         "transformers>=4.10.0",
         "sentencepiece",
-        "datasets>=1.1.3",
-        "opendelta"
+        "datasets>=1.1.3"
     ]
 )
