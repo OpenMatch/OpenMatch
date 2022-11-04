@@ -10,7 +10,11 @@ import datasets
 import torch
 from transformers import PreTrainedTokenizer
 
-from opendelta import BitFitModel, AdapterModel, PrefixModel, LoraModel
+try:
+    from opendelta import BitFitModel, AdapterModel, PrefixModel, LoraModel
+    _opendelta_available = True
+except ModuleNotFoundError:
+    _opendelta_available = False
 
 
 @dataclass
@@ -238,6 +242,9 @@ def mean_pooling(token_embeddings, attention_mask):
 
 
 def get_delta_model_class(model_type):
+    if not _opendelta_available:
+        raise ValueError(
+            'OpenDelta package not available. You can obtain it from https://github.com/thunlp/OpenDelta.')
     delta_models = {
         'bitfit': BitFitModel,
         'adapter': AdapterModel,
