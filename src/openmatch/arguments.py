@@ -182,6 +182,7 @@ class RRTrainingArguments(TrainingArguments):
     remove_unused_columns: Optional[bool] = field(
         default=False, metadata={"help": "Remove columns not required by the model when using an nlp.Dataset."}
     )
+    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
     margin: float = field(default=1.0)
     loss_fn: str = field(
         default="bce",
