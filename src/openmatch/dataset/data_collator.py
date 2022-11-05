@@ -16,7 +16,7 @@ class QPCollator(DataCollatorWithPadding):
     max_p_len: int = 128
 
     def __call__(self, features):
-        qq = [f["query"] for f in features]
+        qq = [f["query_"] for f in features]
         dd = [f["passages"] for f in features]
 
         if isinstance(qq[0], list):

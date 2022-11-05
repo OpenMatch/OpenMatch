@@ -7,7 +7,7 @@ import sys
 from openmatch.arguments import DRPretrainingDataArguments
 from openmatch.arguments import DRTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
-from openmatch.dataset import QPCollator, StreamDRPretrainDataset
+from openmatch.dataset import QPCollator, StreamDRPretrainDataset, MappingDRPretrainDataset
 from openmatch.modeling import DRModel
 from openmatch.trainer import DRTrainer as Trainer
 from openmatch.trainer import GCDenseTrainer
@@ -78,7 +78,9 @@ def main():
         config=config,
         cache_dir=model_args.cache_dir,
     )
-    train_dataset = StreamDRPretrainDataset(
+
+    train_dataset_cls = MappingDRPretrainDataset if training_args.use_mapping_dataset else StreamDRPretrainDataset
+    train_dataset = train_dataset_cls(
         tokenizer, 
         data_args, 
         shuffle_seed=training_args.seed, 

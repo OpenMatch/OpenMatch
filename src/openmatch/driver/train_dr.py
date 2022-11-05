@@ -7,7 +7,7 @@ import sys
 from openmatch.arguments import DataArguments
 from openmatch.arguments import DRTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
-from openmatch.dataset import QPCollator, StreamDRTrainDataset,MappingDRTrainDataset , StreamDREvalDataset
+from openmatch.dataset import QPCollator, StreamDRTrainDataset, MappingDRTrainDataset
 from openmatch.modeling import DRModel
 from openmatch.trainer import DRTrainer as Trainer
 from openmatch.trainer import GCDenseTrainer
@@ -81,9 +81,20 @@ def main():
         delta_model = model_class(model)
         logger.info("Using param efficient method: %s", model_args.param_efficient_method)
 
-    TrainDatasetClass = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset
-    train_dataset = TrainDatasetClass(tokenizer, data_args, shuffle_seed=training_args.seed, cache_dir=data_args.data_cache_dir or model_args.cache_dir)
-    eval_dataset = StreamDREvalDataset(tokenizer, data_args, cache_dir=data_args.data_cache_dir or model_args.cache_dir) if data_args.eval_path is not None else None
+    train_dataset_cls = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset
+    train_dataset = train_dataset_cls(
+        tokenizer, 
+        data_args, 
+        shuffle_seed=training_args.seed, 
+        cache_dir=data_args.data_cache_dir or model_args.cache_dir
+    )
+    eval_dataset = train_dataset_cls(
+        tokenizer, 
+        data_args, 
+        is_eval=True, 
+        cache_dir=data_args.data_cache_dir or model_args.cache_dir
+    ) if data_args.eval_path is not None else None
+
 
     trainer_cls = GCDenseTrainer if training_args.grad_cache else Trainer
     trainer = trainer_cls(
