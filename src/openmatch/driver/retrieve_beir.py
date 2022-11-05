@@ -82,14 +82,6 @@ def main():
         process_index=encoding_args.process_index,
         cache_dir=model_args.cache_dir
     )
-    # it = iter(beir_dataset.query_dataset)
-    # print(next(it))
-    # print(next(it))
-    # print(next(it))
-    # print(next(it))
-    # print(next(it))
-
-    # exit(0)
 
     retriever = Retriever.build_all(model, beir_dataset.corpus_dataset, encoding_args)
     run = retriever.retrieve(beir_dataset.query_datasets["test"])

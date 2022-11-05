@@ -209,7 +209,10 @@ class Retriever:
             qid = str(self.query_lookup[q])
             return_dict[qid] = {}
             for doc_index, score in zip(doc_indices_per_q, scores_per_q):
-                return_dict[qid][str(doc_index)] = float(score)
+                doc_index = str(doc_index)
+                if self.args.remove_identical and qid == doc_index:
+                    continue
+                return_dict[qid][doc_index] = float(score)
             q += 1
 
         logger.info("End searching with {} queries".format(len(return_dict)))

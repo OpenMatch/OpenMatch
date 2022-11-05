@@ -201,6 +201,8 @@ class InferenceArguments(TrainingArguments):
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
+    remove_identical: bool = field(default=False, metadata={"help": "remove identical passages"})
+
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
     retrieve_depth: int = field(default=100, metadata={"help":"number of documents to retrieve in retriever"})
 
