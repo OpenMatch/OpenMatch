@@ -114,8 +114,6 @@ def main():
 
     trainer.train()
     trainer.save_model()
-    if model_args.param_efficient_method:
-        delta_model.save_finetuned(training_args.output_dir + "/delta_model")
     if trainer.is_world_process_zero():
         tokenizer.save_pretrained(training_args.output_dir)
 
