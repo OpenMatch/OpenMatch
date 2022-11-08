@@ -6,3 +6,4 @@ Trained Models
    :caption: Models:
 
    models/t5-ance
+   models/ance-tele_msmarco_qry-psg-encoder
