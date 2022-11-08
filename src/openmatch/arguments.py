@@ -140,6 +140,13 @@ class DataArguments:
 
 
 @dataclass
+class BEIRDataArguments(DataArguments):
+    data_dir: str = field(
+        default=None, metadata={"help": "Path to BEIR data directory"}
+    )
+
+
+@dataclass
 class DRTrainingArguments(TrainingArguments):
     warmup_ratio: float = field(default=0.1)
     remove_unused_columns: Optional[bool] = field(
@@ -198,6 +205,8 @@ class InferenceArguments(TrainingArguments):
     encode_query_as_passage: bool = field(default=False, metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
+
+    remove_identical: bool = field(default=False, metadata={"help": "remove identical passages"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
     retrieve_depth: int = field(default=100, metadata={"help":"number of documents to retrieve in retriever"})

@@ -54,7 +54,8 @@ class Retriever:
         for i in range(0, ngpu):
             vdev.push_back(i)
             vres.push_back(gpu_resources[i])
-        self.index = faiss.index_cpu_to_gpu_multiple(vres, vdev, self.index, co)
+        self.index = faiss.index_cpu_to_gpu_multiple(
+            vres, vdev, self.index, co)
 
     def doc_embedding_inference(self):
         # Note: during evaluation, there's no point in wrapping the model
@@ -63,7 +64,8 @@ class Retriever:
             raise ValueError("No corpus dataset provided")
         dataloader = DataLoader(
             self.corpus_dataset,
-            batch_size=self.args.per_device_eval_batch_size,  # Note that we do not support DataParallel here
+            # Note that we do not support DataParallel here
+            batch_size=self.args.per_device_eval_batch_size,
             collate_fn=DRInferenceCollator(),
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
@@ -99,13 +101,15 @@ class Retriever:
 
         del encoded
         del lookup_indices
-        
+
         if self.args.world_size > 1:
             torch.distributed.barrier()
 
     def init_index_and_add(self, partition: str = None):
-        logger.info("Initializing Faiss index from pre-computed document embeddings")
-        partitions = [partition] if partition is not None else glob.glob(os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
+        logger.info(
+            "Initializing Faiss index from pre-computed document embeddings")
+        partitions = [partition] if partition is not None else glob.glob(
+            os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
         for i, part in enumerate(partitions):
             with open(part, 'rb') as f:
                 data = pickle.load(f)
@@ -166,16 +170,19 @@ class Retriever:
                         batch[k] = v.to(self.args.device)
                     if not self.args.encode_query_as_passage:
                         model_output: DROutput = self.model(query=batch)
-                        encoded.append(model_output.q_reps.cpu().detach().numpy())
+                        encoded.append(
+                            model_output.q_reps.cpu().detach().numpy())
                     else:
                         model_output: DROutput = self.model(passage=batch)
-                        encoded.append(model_output.p_reps.cpu().detach().numpy())
-        
-        encoded = np.concatenate(encoded)
+                        encoded.append(
+                            model_output.p_reps.cpu().detach().numpy())
+
+        if len(encoded) > 0:  # If there is no data in the process, we don't do anything
+            encoded = np.concatenate(encoded)
 
         with open(os.path.join(self.args.output_dir, "embeddings.query.rank.{}".format(self.args.process_index)), 'wb') as f:
             pickle.dump((encoded, lookup_indices), f, protocol=4)
-        
+
         if self.args.world_size > 1:
             torch.distributed.barrier()
 
@@ -188,6 +195,8 @@ class Retriever:
             with open(os.path.join(self.args.output_dir, "embeddings.query.rank.{}".format(i)), 'rb') as f:
                 data = pickle.load(f)
             lookup_indices = data[1]
+            if len(lookup_indices) == 0:  # No data
+                continue
             encoded.append(data[0])
             self.query_lookup.extend(lookup_indices)
         encoded = np.concatenate(encoded)
@@ -200,7 +209,10 @@ class Retriever:
             qid = str(self.query_lookup[q])
             return_dict[qid] = {}
             for doc_index, score in zip(doc_indices_per_q, scores_per_q):
-                return_dict[qid][str(doc_index)] = float(score)
+                doc_index = str(doc_index)
+                if self.args.remove_identical and qid == doc_index:
+                    continue
+                return_dict[qid][doc_index] = float(score)
             q += 1
 
         logger.info("End searching with {} queries".format(len(return_dict)))
@@ -238,7 +250,8 @@ class SuccessiveRetriever(Retriever):
         torch.cuda.empty_cache()
         final_result = {}
         if self.args.process_index == 0:
-            all_partitions = glob.glob(os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
+            all_partitions = glob.glob(os.path.join(
+                self.args.output_dir, "embeddings.corpus.rank.*"))
             for partition in all_partitions:
                 logger.info("Loading partition {}".format(partition))
                 self.init_index_and_add(partition)
@@ -246,7 +259,8 @@ class SuccessiveRetriever(Retriever):
                     self._move_index_to_gpu()
                 cur_result = self.search(topk)
                 self.reset_index()
-                final_result = merge_retrieval_results_by_score([final_result, cur_result], topk)
+                final_result = merge_retrieval_results_by_score(
+                    [final_result, cur_result], topk)
         if self.args.world_size > 1:
             torch.distributed.barrier()
         return final_result
