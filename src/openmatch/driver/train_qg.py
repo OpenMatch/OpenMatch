@@ -9,13 +9,12 @@ import evaluate
 from transformers import (AutoConfig, AutoTokenizer, DefaultDataCollator,
                           HfArgumentParser, Seq2SeqTrainer, set_seed)
 from transformers.trainer_utils import EvalPrediction
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizer, T5ForConditionalGeneration
 
 from openmatch.arguments import DataArguments
 from openmatch.arguments import QGTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import MappingQGTrainDataset, StreamQGTrainDataset
-from openmatch.modeling import DRModel
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +77,8 @@ def main():
         cache_dir=model_args.cache_dir,
         use_fast=False,
     )
-    model = DRModel.build(
-        model_args,
-        data_args,
-        training_args,
+    model = T5ForConditionalGeneration.from_pretrained(
+        model_args.model_name_or_path,
         config=config,
         cache_dir=model_args.cache_dir,
     )

@@ -285,8 +285,8 @@ class QGTrainDataset(TrainDatasetBase):
             text_encoding,
             truncation='only_first',
             max_length=self.data_args.q_max_len if is_query else self.data_args.p_max_len,
-            padding=False,
-            return_attention_mask=False,
+            padding='max_length',
+            return_attention_mask=True,
             return_token_type_ids=False,
             return_tensors="pt",
         )
@@ -306,7 +306,7 @@ class QGTrainDataset(TrainDatasetBase):
             encoded_query[encoded_query == self.tokenizer.pad_token_id] == -100
             encoded_psg = self.create_one_example(pos_psg)
             psg_input_ids, psg_attention_mask = encoded_psg.input_ids, encoded_psg.attention_mask
-            return {"input_ids": psg_input_ids, "attention_mask": psg_attention_mask, "labels": encoded_query}
+            return {"input_ids": psg_input_ids[0], "attention_mask": psg_attention_mask[0], "labels": encoded_query[0]}
 
         return process_fn
 
