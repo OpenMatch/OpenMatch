@@ -2,13 +2,14 @@
 
 from dataclasses import dataclass, field
 from typing import Optional, List
-from transformers import TrainingArguments
+from transformers import TrainingArguments, Seq2SeqTrainingArguments
 
 
 @dataclass
 class ModelArguments:
     model_name_or_path: str = field(
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     target_model_path: str = field(
         default=None,
@@ -116,7 +117,6 @@ class DataArguments:
         default=None, metadata={"help": "Where do you want to store the data downloaded from huggingface"}
     )
 
-
     query_template: str = field(
         default=None,
         metadata={"help": "template for query"}
@@ -152,13 +152,18 @@ class DRTrainingArguments(TrainingArguments):
     remove_unused_columns: Optional[bool] = field(
         default=False, metadata={"help": "Remove columns not required by the model when using an nlp.Dataset."}
     )
-    negatives_x_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
-    do_encode: bool = field(default=False, metadata={"help": "run the encoding loop"})
-    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
-    grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
+    negatives_x_device: bool = field(default=False, metadata={
+                                     "help": "share negatives across devices"})
+    do_encode: bool = field(default=False, metadata={
+                            "help": "run the encoding loop"})
+    use_mapping_dataset: bool = field(default=False, metadata={
+                                      "help": "Use mapping dataset instead of iterable dataset in training"})
+    grad_cache: bool = field(default=False, metadata={
+                             "help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
-    drop_last: bool = field(default=False,metadata={"help":"Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
+    drop_last: bool = field(default=False, metadata={
+                            "help": "Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
 
 
 @dataclass
@@ -175,11 +180,13 @@ class DRPretrainingDataArguments(DataArguments):
 
     cropping_ratio_min: float = field(
         default=0.1,
-        metadata={"help": "Minimum ratio of the cropped span to the original document span"}
+        metadata={
+            "help": "Minimum ratio of the cropped span to the original document span"}
     )
     cropping_ratio_max: float = field(
         default=0.5,
-        metadata={"help": "Maximum ratio of the cropped span to the original document span"}
+        metadata={
+            "help": "Maximum ratio of the cropped span to the original document span"}
     )
 
 
@@ -189,7 +196,8 @@ class RRTrainingArguments(TrainingArguments):
     remove_unused_columns: Optional[bool] = field(
         default=False, metadata={"help": "Remove columns not required by the model when using an nlp.Dataset."}
     )
-    use_mapping_dataset: bool = field(default=False, metadata={"help":"Use mapping dataset instead of iterable dataset in training"})
+    use_mapping_dataset: bool = field(default=False, metadata={
+                                      "help": "Use mapping dataset instead of iterable dataset in training"})
     margin: float = field(default=1.0)
     loss_fn: str = field(
         default="bce",
@@ -198,17 +206,34 @@ class RRTrainingArguments(TrainingArguments):
 
 
 @dataclass
+class QGTrainingArguments(Seq2SeqTrainingArguments):
+    warmup_ratio: float = field(default=0.1)
+    use_mapping_dataset: bool = field(default=False, metadata={
+                                      "help": "Use mapping dataset instead of iterable dataset in training"})
+
+
+@dataclass
 class InferenceArguments(TrainingArguments):
-    use_gpu: bool = field(default=False, metadata={"help": "Use GPU for Faiss retrieval"})
-    encoded_save_path: str = field(default=None, metadata={"help": "where to save the encode"})
-    trec_save_path: str = field(default=None, metadata={"help": "where to save the trec file"})
-    encode_query_as_passage: bool = field(default=False, metadata={"help":"Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
-    trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
-    id_key_name: str = field(default="id", metadata={"help": "key name for id"})
+    use_gpu: bool = field(default=False, metadata={
+                          "help": "Use GPU for Faiss retrieval"})
+    encoded_save_path: str = field(default=None, metadata={
+                                   "help": "where to save the encode"})
+    trec_save_path: str = field(default=None, metadata={
+                                "help": "where to save the trec file"})
+    encode_query_as_passage: bool = field(default=False, metadata={
+                                          "help": "Treat input queries as passages instead of queries for encoding. Use corpus_path, doc_template and doc_column_names instead if you used this option."})
+    trec_run_path: str = field(default=None, metadata={
+                               "help": "previous stage TrecRun file"})
+    id_key_name: str = field(default="id", metadata={
+                             "help": "key name for id"})
 
-    remove_identical: bool = field(default=False, metadata={"help": "remove identical passages"})
+    remove_identical: bool = field(default=False, metadata={
+                                   "help": "remove identical passages"})
 
-    reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
-    retrieve_depth: int = field(default=100, metadata={"help":"number of documents to retrieve in retriever"})
+    reranking_depth: int = field(default=None, metadata={
+                                 "help": "re-ranking depth"})
+    retrieve_depth: int = field(default=100, metadata={
+                                "help": "number of documents to retrieve in retriever"})
 
-    max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})
+    max_inmem_docs: int = field(default=10000000, metadata={
+                                "help": "max number of docs to keep in memory"})

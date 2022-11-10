@@ -276,3 +276,44 @@ class StreamRRTrainDataset(StreamTrainDatasetMixin, RRTrainDataset):
 
 class MappingRRTrainDataset(MappingTrainDatasetMixin, RRTrainDataset):
     pass
+
+
+class QGTrainDataset(TrainDatasetBase):
+
+    def create_one_example(self, text_encoding: List[int], is_query=False) -> BatchEncoding:
+        item = self.tokenizer.encode_plus(
+            text_encoding,
+            truncation='only_first',
+            max_length=self.data_args.q_max_len if is_query else self.data_args.p_max_len,
+            padding=False,
+            return_attention_mask=False,
+            return_token_type_ids=False,
+            return_tensors="pt",
+        )
+        return item
+
+    def get_process_fn(self, epoch, hashed_seed):
+
+        def process_fn(example):
+            qry = example['query']
+            group_positives = example['positives']
+            if self.data_args.positive_passage_no_shuffle or hashed_seed is None:
+                pos_psg = group_positives[0]
+            else:
+                pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
+
+            encoded_query = self.create_one_example(qry, is_query=True).input_ids
+            encoded_query[encoded_query == self.tokenizer.pad_token_id] == -100
+            encoded_psg = self.create_one_example(pos_psg)
+            psg_input_ids, psg_attention_mask = encoded_psg.input_ids, encoded_psg.attention_mask
+            return {"input_ids": psg_input_ids, "attention_mask": psg_attention_mask, "labels": encoded_query}
+
+        return process_fn
+
+
+class StreamQGTrainDataset(StreamTrainDatasetMixin, QGTrainDataset):
+    pass
+
+
+class MappingQGTrainDataset(MappingTrainDatasetMixin, QGTrainDataset):
+    pass
