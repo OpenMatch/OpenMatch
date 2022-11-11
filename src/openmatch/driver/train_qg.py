@@ -22,8 +22,14 @@ logger = logging.getLogger(__name__)
 def compute_metrics(evaluator, tokenizer: PreTrainedTokenizer, eval_output: EvalPrediction):
     predictions = tokenizer.batch_decode(eval_output.predictions, remove_special_tokens=True)
     label_ids = tokenizer.batch_decode(eval_output.label_ids, remove_special_tokens=True)
-    results = evaluator.compute(predictions=predictions, references=label_ids)
-    return results
+    results = evaluator.compute(predictions=predictions, references=[[x] for x in label_ids])
+    return {
+        "bleu": results["bleu"],
+        "bleu-1": results["precisions"][0],
+        "bleu-2": results["precisions"][1],
+        "bleu-3": results["precisions"][2],
+        "bleu-4": results["precisions"][3],
+    }
 
 
 def main():
@@ -97,7 +103,7 @@ def main():
         cache_dir=data_args.data_cache_dir or model_args.cache_dir
     ) if data_args.eval_path is not None else None
 
-    rouge = evaluate.load("rouge")
+    bleu = evaluate.load("bleu")
 
     trainer = Seq2SeqTrainer(
         model=model,
@@ -106,7 +112,7 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=DefaultDataCollator(),
-        compute_metrics=partial(compute_metrics, rouge, tokenizer),
+        compute_metrics=partial(compute_metrics, bleu, tokenizer),
     )
     train_dataset.trainer = trainer
 
