@@ -96,16 +96,25 @@ def main():
                 outputs = model.generate(
                     batch["input_ids"],
                     attention_mask=batch["attention_mask"],
-                    num_beams=1,
-                    do_sample=False,
+                    num_beams=encoding_args.generation_num_beams,
+                    do_sample=encoding_args.do_sample,
+                    top_k=encoding_args.top_k,
+                    top_p=encoding_args.top_p,
                     max_new_tokens=data_args.q_max_len,
+                    num_return_sequences=encoding_args.num_return_sequences,
                 )
-        generated_queries.extend(tokenizer.batch_decode(outputs, skip_special_tokens=True))
+                # group outputs by doc
+                outputs = outputs.view(batch["input_ids"].shape[0], encoding_args.num_return_sequences, -1)
+        for queries in outputs:
+            generated_queries.append(tokenizer.batch_decode(queries, skip_special_tokens=True))
     
     if encoding_args.world_size > 1:
-        with open(encoding_args.queries_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f:
-            for i, q in zip(ids, generated_queries):
-                f.write(f"generated_q_{i}\t{q}\n")
+        with open(encoding_args.queries_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f_queries, \
+             open(encoding_args.qrels_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f_qrels:
+            for docid, queries in zip(ids, generated_queries):
+                for qid, q in enumerate(queries):
+                    f_queries.write(f"generated_q_{qid}_for_{docid}\t{q}\n")
+                    f_qrels.write(f"generated_q_{qid}_for_{docid}\t0\t{docid}\t1\n")
         torch.distributed.barrier()
         if encoding_args.process_index == 0:
             ids, generated_queries = [], []
@@ -116,9 +125,12 @@ def main():
                         ids.append(id_)
                         generated_queries.append(q)
     if encoding_args.process_index == 0:
-        with open(encoding_args.queries_save_path, "w") as f:
-            for i, q in zip(ids, generated_queries):
-                f.write(f"generated_q_{i}\t{q}\n")
+        with open(encoding_args.queries_save_path, "w") as f_queries, \
+             open(encoding_args.qrels_save_path, "w") as f_qrels:
+            for docid, queries in zip(ids, generated_queries):
+                for qid, q in enumerate(queries):
+                    f_queries.write(f"generated_q_{qid}_for_{docid}\t{q}\n")
+                    f_qrels.write(f"generated_q_{qid}_for_{docid}\t0\t{docid}\t1\n")
 
 
 if __name__ == '__main__':

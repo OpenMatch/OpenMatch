@@ -240,6 +240,16 @@ class InferenceArguments(TrainingArguments):
 
 
 @dataclass
-class QGInferenceArguments(TrainingArguments):
+class QGInferenceArguments(Seq2SeqTrainingArguments):
     queries_save_path: str = field(default=None, metadata={
                                       "help": "where to save the queries"}) 
+    qrels_save_path: str = field(default=None, metadata={
+                                      "help": "where to save the qrels"})
+    num_return_sequences: int = field(default=1, metadata={
+                                        "help": "number of generated queries to return"})
+    do_sample: bool = field(default=False, metadata={
+                                        "help": "whether or not to use sampling; use greedy decoding otherwise"})
+    top_k: int = field(default=25, metadata={
+                                        "help": "top_k for beam search"})
+    top_p: float = field(default=0.95, metadata={
+                                        "help": "top_p for beam search"})
