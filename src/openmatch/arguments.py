@@ -237,3 +237,9 @@ class InferenceArguments(TrainingArguments):
 
     max_inmem_docs: int = field(default=10000000, metadata={
                                 "help": "max number of docs to keep in memory"})
+
+
+@dataclass
+class QGInferenceArguments(TrainingArguments):
+    queries_save_path: str = field(default=None, metadata={
+                                      "help": "where to save the queries"}) 
