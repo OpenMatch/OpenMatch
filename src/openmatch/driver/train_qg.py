@@ -3,33 +3,16 @@
 import logging
 import os
 import sys
-from functools import partial
 
-import evaluate
 from transformers import (AutoConfig, AutoTokenizer, DefaultDataCollator,
-                          HfArgumentParser, Seq2SeqTrainer, set_seed)
-from transformers.trainer_utils import EvalPrediction
-from transformers import PreTrainedTokenizer, T5ForConditionalGeneration
+                          HfArgumentParser, Seq2SeqTrainer,
+                          T5ForConditionalGeneration, set_seed)
 
-from openmatch.arguments import DataArguments
+from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import QGTrainingArguments as TrainingArguments
-from openmatch.arguments import ModelArguments
 from openmatch.dataset import MappingQGTrainDataset, StreamQGTrainDataset
 
 logger = logging.getLogger(__name__)
-
-
-def compute_metrics(evaluator, tokenizer: PreTrainedTokenizer, eval_output: EvalPrediction):
-    predictions = tokenizer.batch_decode(eval_output.predictions, remove_special_tokens=True)
-    label_ids = tokenizer.batch_decode(eval_output.label_ids, remove_special_tokens=True)
-    results = evaluator.compute(predictions=predictions, references=[[x] for x in label_ids])
-    return {
-        "bleu": results["bleu"],
-        "bleu-1": results["precisions"][0],
-        "bleu-2": results["precisions"][1],
-        "bleu-3": results["precisions"][2],
-        "bleu-4": results["precisions"][3],
-    }
 
 
 def main():
@@ -103,16 +86,13 @@ def main():
         cache_dir=data_args.data_cache_dir or model_args.cache_dir
     ) if data_args.eval_path is not None else None
 
-    bleu = evaluate.load("bleu")
-
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        data_collator=DefaultDataCollator(),
-        compute_metrics=partial(compute_metrics, bleu, tokenizer),
+        data_collator=DefaultDataCollator()
     )
     train_dataset.trainer = trainer
 
