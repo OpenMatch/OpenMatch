@@ -4,7 +4,7 @@ import os
 
 from transformers import PreTrainedTokenizer
 
-from ..arguments import BEIRDataArguments
+from ..arguments import DataArguments
 from .inference_dataset import InferenceDataset
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class BEIRDataset():
     def __init__(
         self, 
         tokenizer: PreTrainedTokenizer, 
-        data_args: BEIRDataArguments, 
+        data_args: DataArguments, 
         full_tokenization: bool = True, 
         mode: str = "processed",
         stream: bool = True,

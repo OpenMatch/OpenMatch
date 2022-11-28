@@ -3,7 +3,7 @@ import os
 import sys
 
 import pytrec_eval
-from openmatch.arguments import BEIRDataArguments
+from openmatch.arguments import DataArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import BEIRDataset
@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = HfArgumentParser((ModelArguments, BEIRDataArguments, EncodingArguments))
+    parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
-        data_args: BEIRDataArguments
+        data_args: DataArguments
         encoding_args: EncodingArguments
 
     if (
