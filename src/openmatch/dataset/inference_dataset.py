@@ -247,7 +247,7 @@ class MappingJsonlDataset(MappingInferenceDataset):
             streaming=True, 
             cache_dir=self.cache_dir
         )["train"].filter(self.filter_fn)
-        sample = list(self.dataset.take(1))[0]
+        sample = list(hf_dataset.take(1))[0]
         self.all_columns = sample.keys()
         self.dataset = {}
         for item in hf_dataset:
