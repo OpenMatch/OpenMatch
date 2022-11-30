@@ -69,9 +69,9 @@ def main():
         use_fast=False,
     )
     model = DRModel.build(
-        model_args,
-        data_args,
-        training_args,
+        model_args=model_args,
+        data_args=data_args,
+        train_args=training_args,
         config=config,
         cache_dir=model_args.cache_dir,
     )

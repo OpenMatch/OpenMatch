@@ -25,7 +25,11 @@ def get_positive_and_negative_samples(query_dataset, corpus_dataset, qrel, n_sam
     negatives = negatives[:depth]
     random.shuffle(negatives)
     if (len(origin_positives)) >= 1 and len(negatives) >= 1:
-        return process_one(query_dataset, corpus_dataset, qid, origin_positives, negatives[:n_sample])
+        item = process_one(query_dataset, corpus_dataset, qid, origin_positives, negatives[:n_sample])
+        if item["positives"] and item["negatives"]:
+            return item
+        else:
+            return None
     else:
         return None
 

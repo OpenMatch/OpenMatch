@@ -166,8 +166,8 @@ class DRModel(nn.Module):
     @classmethod
     def build(
             cls,
-            model_name_or_path: None,
             model_args: ModelArguments,
+            model_name_or_path: str = None,
             data_args: DataArguments = None,
             train_args: TrainingArguments = None,
             **hf_kwargs,
