@@ -113,6 +113,8 @@ def main():
              open(encoding_args.qrels_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f_qrels:
             for docid, queries in zip(ids, generated_queries):
                 for qid, q in enumerate(queries):
+                    if len(q) < 10:
+                        continue
                     f_queries.write(f"generated_q_{qid}_for_{docid}\t{q}\n")
                     f_qrels.write(f"generated_q_{qid}_for_{docid}\t0\t{docid}\t1\n")
         torch.distributed.barrier()
@@ -129,6 +131,8 @@ def main():
              open(encoding_args.qrels_save_path, "w") as f_qrels:
             for docid, queries in zip(ids, generated_queries):
                 for qid, q in enumerate(queries):
+                    if len(q) < 10:
+                        continue
                     f_queries.write(f"generated_q_{qid}_for_{docid}\t{q}\n")
                     f_qrels.write(f"generated_q_{qid}_for_{docid}\t0\t{docid}\t1\n")
 

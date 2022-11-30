@@ -93,6 +93,9 @@ class DataArguments:
     corpus_path: str = field(
         default=None, metadata={"help": "Path to corpus file"}
     )
+    data_dir: str = field(
+        default=None, metadata={"help": "Path to BEIR data directory"}
+    )
     train_n_passages: int = field(default=8)
     positive_passage_no_shuffle: bool = field(
         default=False, metadata={"help": "always use the first positive passage"})
@@ -136,13 +139,6 @@ class DataArguments:
     all_markers: str = field(
         default=None,
         metadata={"help": "all markers in the template"}
-    )
-
-
-@dataclass
-class BEIRDataArguments(DataArguments):
-    data_dir: str = field(
-        default=None, metadata={"help": "Path to BEIR data directory"}
     )
 
 

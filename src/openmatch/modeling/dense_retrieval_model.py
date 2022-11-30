@@ -167,34 +167,36 @@ class DRModel(nn.Module):
     def build(
             cls,
             model_args: ModelArguments,
+            model_name_or_path: str = None,
             data_args: DataArguments = None,
             train_args: TrainingArguments = None,
             **hf_kwargs,
     ):
+        model_name_or_path = model_name_or_path or model_args.model_name_or_path
         # load local
         config = None
         head_q = head_p = None
-        if os.path.exists(os.path.join(model_args.model_name_or_path, "openmatch_config.json")):
-            with open(os.path.join(model_args.model_name_or_path, "openmatch_config.json")) as f:
+        if os.path.exists(os.path.join(model_name_or_path, "openmatch_config.json")):
+            with open(os.path.join(model_name_or_path, "openmatch_config.json")) as f:
                 config = json.load(f)
 
-        if os.path.isdir(model_args.model_name_or_path) and config is not None:  # an OpenMatch model
+        if os.path.isdir(model_name_or_path) and config is not None:  # an OpenMatch model
             tied = config["tied"]
             if tied:
-                logger.info(f'loading query model weight from {model_args.model_name_or_path}')
+                logger.info(f'loading model weight from {model_name_or_path}')
                 model_name = config["plm_backbone"]["type"]
                 model_class = getattr(importlib.import_module("transformers"), model_name)
                 lm_q = lm_p = model_class.from_pretrained(
-                    model_args.model_name_or_path,
+                    model_name_or_path,
                     **hf_kwargs
                 )
                 if config["linear_head"]:
-                    head_q = head_p = LinearHead.load(model_args.model_name_or_path)
+                    head_q = head_p = LinearHead.load(model_name_or_path)
             else:
-                _qry_model_path = os.path.join(model_args.model_name_or_path, 'query_model')
-                _psg_model_path = os.path.join(model_args.model_name_or_path, 'passage_model')
-                _qry_head_path = os.path.join(model_args.model_name_or_path, 'query_head')
-                _psg_head_path = os.path.join(model_args.model_name_or_path, 'passage_head')
+                _qry_model_path = os.path.join(model_name_or_path, 'query_model')
+                _psg_model_path = os.path.join(model_name_or_path, 'passage_model')
+                _qry_head_path = os.path.join(model_name_or_path, 'query_head')
+                _psg_head_path = os.path.join(model_name_or_path, 'passage_head')
 
                 logger.info(f'loading query model weight from {_qry_model_path}')
                 model_name = config["plm_backbone"]["lm_q_type"]
@@ -226,7 +228,7 @@ class DRModel(nn.Module):
         else:  # a Huggingface model
             tied = not model_args.untie_encoder
             model_class = T5EncoderModel if model_args.encoder_only else AutoModel
-            lm_q = model_class.from_pretrained(model_args.model_name_or_path, **hf_kwargs)
+            lm_q = model_class.from_pretrained(model_name_or_path, **hf_kwargs)
             lm_p = copy.deepcopy(lm_q) if not tied else lm_q
             if model_args.add_linear_head:
                 head_q = LinearHead(model_args.projection_in_dim, model_args.projection_out_dim)
