@@ -47,6 +47,22 @@ def read_qrel(relevance_file):
     return qrel
 
 
+def load_beir_qrels(qrels_file):
+    qrels = {}
+    with open(qrels_file) as f:
+        tsvreader = csv.DictReader(f, delimiter="\t")
+        for row in tsvreader:
+            qid = row["query-id"]
+            pid = row["corpus-id"]
+            rel = int(row["score"])
+            if rel >= 1:
+                if qid in qrels:
+                    qrels[qid].append(pid)
+                else:
+                    qrels[qid] = [pid]
+    return qrels
+
+
 def process_one(query_dataset, corpus_dataset, q, poss, negs):
     train_example = {
         'query': query_dataset[q]["input_ids"],
@@ -65,6 +81,7 @@ parser.add_argument("--qrels_file", type=str, required=True)
 parser.add_argument('--save_to', required=True)
 parser.add_argument('--n_sample', type=int, default=40)
 parser.add_argument('--depth', type=int, default=200)
+parser.add_argument('--beir', action='store_true')
 
 data_args, other_args = parser.parse_args_into_dataclasses()
 
@@ -83,7 +100,7 @@ corpus_dataset = InferenceDataset.load(
     full_tokenization=False,
     stream=False
 )
-qrel = read_qrel(other_args.qrels_file)
+qrel = read_qrel(other_args.qrels_file) if not other_args.beir else load_beir_qrels(other_args.qrels_file)
 run = load_from_trec(other_args.hn_file, as_list=True)
 run_list = []
 for qid, rank_list in run.items():

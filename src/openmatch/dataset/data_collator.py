@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+import torch
 from transformers import DataCollatorWithPadding, DefaultDataCollator
 
 
@@ -73,6 +74,49 @@ class PairCollator(DataCollatorWithPadding):
         )
 
         return pos_pair_collated, neg_pair_collated
+
+
+@dataclass
+class DistillationCollator(DataCollatorWithPadding):
+
+    max_q_len: int = 32
+    max_p_len: int = 128
+
+    def __call__(self, features):
+        qq = [f["query_"] for f in features]
+        positives = [f["positive_"] for f in features]
+        negatives = [f["negative_"] for f in features]
+        scores = [f["score_"] for f in features]
+
+        if isinstance(qq[0], list):
+            qq = sum(qq, [])
+        if isinstance(positives[0], list):
+            positives = sum(positives, [])
+        if isinstance(negatives[0], list):
+            negatives = sum(negatives, [])
+
+        q_collated = self.tokenizer.pad(
+            qq,
+            padding='max_length',
+            max_length=self.max_q_len,
+            return_tensors="pt",
+        )
+        positives_collated = self.tokenizer.pad(
+            positives,
+            padding='max_length',
+            max_length=self.max_p_len,
+            return_tensors="pt",
+        )
+        negatives_collated = self.tokenizer.pad(
+            negatives,
+            padding='max_length',
+            max_length=self.max_p_len,
+            return_tensors="pt",
+        )
+        scores_collated = torch.tensor(scores)
+        # print(q_collated, positives_collated, negatives_collated, scores_collated)
+
+        return q_collated, positives_collated, negatives_collated, scores_collated
 
 
 @dataclass

@@ -158,8 +158,7 @@ class DRTrainingArguments(TrainingArguments):
                              "help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
-    drop_last: bool = field(default=False, metadata={
-                            "help": "Whether to drop the last incomplete batch (if the length of the dataset is not divisible by the batch size)or not. DRTrainers' behaviour depends on this setting instead of dataloader_drop_last."})
+    distillation: bool = field(default=False, metadata={"help": "Use distillation"})
 
 
 @dataclass

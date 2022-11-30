@@ -317,3 +317,36 @@ class StreamQGTrainDataset(StreamTrainDatasetMixin, QGTrainDataset):
 
 class MappingQGTrainDataset(MappingTrainDatasetMixin, QGTrainDataset):
     pass
+
+
+class DistillationTrainDataset(TrainDatasetBase):
+
+    def create_one_example(self, text_encoding: List[int], is_query=False) -> BatchEncoding:
+        item = self.tokenizer.encode_plus(
+            text_encoding,
+            truncation='only_first',
+            max_length=self.data_args.q_max_len if is_query else self.data_args.p_max_len,
+            padding=False,
+            return_attention_mask=False,
+            return_token_type_ids=False,
+        )
+        return item
+
+    def get_process_fn(self, epoch, hashed_seed):
+
+        def process_fn(example):
+            qry = self.create_one_example(example["query"], is_query=True)
+            pos = self.create_one_example(example["positive"])
+            neg = self.create_one_example(example["negative"])
+            score = example["score"]
+            return {"query_": qry, "positive_": pos, "negative_": neg, "score_": score}
+
+        return process_fn
+
+
+class StreamDistillationTrainDataset(StreamTrainDatasetMixin, DistillationTrainDataset):
+    pass
+
+
+class MappingDistillationTrainDataset(MappingTrainDatasetMixin, DistillationTrainDataset):
+    pass
