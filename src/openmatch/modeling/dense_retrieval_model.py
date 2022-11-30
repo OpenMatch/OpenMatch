@@ -57,8 +57,6 @@ class DRModel(nn.Module):
         self.head_q = head_q
         self.head_p = head_p
 
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-
         self.feature = feature
         self.pooling = pooling
         self.normalize = normalize
@@ -68,12 +66,14 @@ class DRModel(nn.Module):
         self.data_args = data_args
 
 
-        if train_args is not None and train_args.negatives_x_device:
-            if not dist.is_initialized():
-                raise ValueError('Distributed training has not been initialized for representation all gather.')
-            self.process_rank = dist.get_rank()
-            self.world_size = dist.get_world_size()
-
+        if train_args is not None: 
+            self.loss_fn = nn.MSELoss() if train_args.distillation else nn.CrossEntropyLoss(reduction='mean')
+            if train_args.negatives_x_device:
+                if not dist.is_initialized():
+                    raise ValueError('Distributed training has not been initialized for representation all gather.')
+                self.process_rank = dist.get_rank()
+                self.world_size = dist.get_world_size()
+            
     def _get_config_dict(self):
         config = {
             "tied": self.tied,
@@ -91,45 +91,62 @@ class DRModel(nn.Module):
             self,
             query: Dict[str, Tensor] = None,
             passage: Dict[str, Tensor] = None,
+            positive: Dict[str, Tensor] = None,
+            negative: Dict[str, Tensor] = None,
+            score: Tensor = None,
     ):
 
         q_hidden, q_reps = self.encode_query(query)
-        p_hidden, p_reps = self.encode_passage(passage)
 
-        if q_reps is None or p_reps is None:
+        if self.train_args.distillation:
+
+            pos_hidden, pos_reps = self.encode_passage(positive)
+            neg_hidden, neg_reps = self.encode_passage(negative)
+            scores_pos = torch.sum(q_reps * pos_reps, dim=1)
+            scores_neg = torch.sum(q_reps * neg_reps, dim=1)
+            margin_pred = scores_pos - scores_neg
+            # print(margin_pred, score)
+            loss = self.loss_fn(margin_pred, score)
+            return DROutput(q_reps=q_reps, p_reps=pos_reps, loss=loss, scores=torch.stack([scores_pos, scores_neg], dim=1))
+
+        else:
+
+            p_hidden, p_reps = self.encode_passage(passage)
+
+            if q_reps is None or p_reps is None:
+                return DROutput(
+                    q_reps=q_reps,
+                    p_reps=p_reps
+                )
+
+            # if self.training:
+            if self.train_args.negatives_x_device:
+                q_reps = self.dist_gather_tensor(q_reps)
+                p_reps = self.dist_gather_tensor(p_reps)
+
+            effective_bsz = self.train_args.per_device_train_batch_size * self.world_size \
+                if self.train_args.negatives_x_device \
+                else self.train_args.per_device_train_batch_size
+
+            scores = torch.matmul(q_reps, p_reps.transpose(0, 1))
+
+            target = torch.arange(
+                scores.size(0),
+                device=scores.device,
+                dtype=torch.long
+            )
+            target = target * self.data_args.train_n_passages
+            
+            loss = self.loss_fn(scores, target)
+
+            if self.training and self.train_args.negatives_x_device:
+                loss = loss * self.world_size  # counter average weight reduction
             return DROutput(
+                loss=loss,
+                scores=scores,
                 q_reps=q_reps,
                 p_reps=p_reps
             )
-
-        # if self.training:
-        if self.train_args.negatives_x_device:
-            q_reps = self.dist_gather_tensor(q_reps)
-            p_reps = self.dist_gather_tensor(p_reps)
-
-        effective_bsz = self.train_args.per_device_train_batch_size * self.world_size \
-            if self.train_args.negatives_x_device \
-            else self.train_args.per_device_train_batch_size
-
-        scores = torch.matmul(q_reps, p_reps.transpose(0, 1))
-
-        target = torch.arange(
-            scores.size(0),
-            device=scores.device,
-            dtype=torch.long
-        )
-        target = target * self.data_args.train_n_passages
-        
-        loss = self.loss_fn(scores, target)
-
-        if self.training and self.train_args.negatives_x_device:
-            loss = loss * self.world_size  # counter average weight reduction
-        return DROutput(
-            loss=loss,
-            scores=scores,
-            q_reps=q_reps,
-            p_reps=p_reps
-        )
 
     def encode(self, items, model, head):
         if items is None:

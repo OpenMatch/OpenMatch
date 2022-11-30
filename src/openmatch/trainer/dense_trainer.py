@@ -105,8 +105,12 @@ class DRTrainer(Trainer):
         )
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        query, passage = inputs
-        outputs = model(query=query, passage=passage)
+        if self.args.distillation:
+            query, positive, negative, score = inputs
+            outputs = model(query=query, positive=positive, negative=negative, score=score)
+        else:
+            query, passage = inputs
+            outputs = model(query=query, passage=passage)
         return (outputs.loss, outputs) if return_outputs else outputs.loss
 
     def training_step(self, *args):

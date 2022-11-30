@@ -1,6 +1,5 @@
-import os
-from argparse import ArgumentParser
 import json
+import os
 
 from tqdm import tqdm
 from transformers import AutoTokenizer, HfArgumentParser

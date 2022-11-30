@@ -145,6 +145,7 @@ def main():
             torch.distributed.barrier()
         cur_step = get_current_ckpt_step(model_args, evaluated_steps)
         if cur_step is not None:
+            time.sleep(2)
             cur_ckpt = os.path.join(
                 model_args.model_name_or_path, "checkpoint-{}".format(cur_step))
             logger.info("Loading checkpoint at step %s", cur_step)
