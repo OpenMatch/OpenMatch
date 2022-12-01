@@ -232,6 +232,25 @@ class Retriever:
         if self.args.world_size > 1:
             torch.distributed.barrier()
         return results
+    
+    def split_retrieve(self, query_dataset: IterableDataset, topk: int = 100):
+        self.query_embedding_inference(query_dataset)
+        del self.model
+        torch.cuda.empty_cache()
+        final_result = {}
+        if self.args.process_index == 0:
+            all_partitions = glob.glob(os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
+            for partition in all_partitions:
+                logger.info("Loading partition {}".format(partition))
+                self.init_index_and_add(partition)
+                if self.args.use_gpu:
+                    self._move_index_to_gpu()
+                cur_result = self.search(topk)
+                self.reset_index()
+                final_result = merge_retrieval_results_by_score([final_result, cur_result], topk)
+        if self.args.world_size > 1:
+            torch.distributed.barrier()
+        return final_result
 
 
 class SuccessiveRetriever(Retriever):

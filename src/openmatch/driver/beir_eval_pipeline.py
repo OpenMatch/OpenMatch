@@ -9,6 +9,7 @@ from openmatch.arguments import ModelArguments
 from openmatch.dataset import BEIRDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
+from openmatch.utils import save_as_trec
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
 logger = logging.getLogger(__name__)
@@ -83,16 +84,28 @@ def main():
     )
 
     retriever = Retriever.build_all(model, beir_dataset.corpus_dataset, encoding_args)
-    run = retriever.retrieve(beir_dataset.query_datasets["test"])
+    
+    if encoding_args.use_split_search:
+        run = retriever.split_retrieve(beir_dataset.query_datasets["test"])
+    else:
+        run = retriever.retrieve(beir_dataset.query_datasets["test"])
 
     if encoding_args.local_process_index == 0:
-
+            
+        # Save trec file
+        if encoding_args.trec_save_path is None:
+            encoding_args.trec_save_path = os.path.join(encoding_args.output_dir, "test.trec")
+        save_as_trec(result, encoding_args.trec_save_path)
+        
+        # compute metric
         evaluator = pytrec_eval.RelevanceEvaluator(
         beir_dataset.qrels["test"], {'ndcg_cut.10'})
         eval_results = evaluator.evaluate(run)
 
         def print_line(measure, scope, value):
             print('{:25s}{:8s}{:.4f}'.format(measure, scope, value))
+            with open(os.path.join(encoding_args.output_dir, "test_result.log"), "w", encoding="utf-8") as fw:
+                fw.write('{:25s}{:8s}{:.4f}\n'.format(measure, scope, value))
 
         for query_id, query_measures in sorted(eval_results.items()):
             for measure, value in sorted(query_measures.items()):
@@ -111,6 +124,7 @@ def main():
                     measure,
                     [query_measures[measure]
                     for query_measures in eval_results.values()]))
+
 
 
 if __name__ == '__main__':
