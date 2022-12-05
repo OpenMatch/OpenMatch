@@ -86,8 +86,10 @@ def main():
     retriever = Retriever.build_all(model, beir_dataset.corpus_dataset, encoding_args)
     
     if encoding_args.use_split_search:
+        retriever = Retriever.build_embeddings(model, beir_dataset.corpus_dataset, encoding_args)
         run = retriever.split_retrieve(beir_dataset.query_datasets["test"], topk=encoding_args.retrieve_depth)
     else:
+        retriever = Retriever.build_all(model, beir_dataset.corpus_dataset, encoding_args)
         run = retriever.retrieve(beir_dataset.query_datasets["test"], topk=encoding_args.retrieve_depth)
 
     if encoding_args.local_process_index == 0:

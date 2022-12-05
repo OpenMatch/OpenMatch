@@ -1,8 +1,8 @@
-export OUTPUT_DIR=/data/private/experiments # Path to store evaluation results.
+export OUTPUT_DIR=/data/private/sunsi/experiments/ance-tele # Path to store evaluation results.
 export train_job_name=cocodr-base-msmarco # Folder of model files (Placed under OUTPUT_DIR by default).
 ## *************************************
 ## GPU setup
-TOT_CUDA="1,2,3,4"
+TOT_CUDA="5"
 CUDAs=(${TOT_CUDA//,/ })
 CUDA_NUM=${#CUDAs[@]}
 PORT="1234"
@@ -10,9 +10,9 @@ PORT="1234"
 ## 17 BEIR Datasets.
 ## *************************************
 # Path to store dataset files.
-export DATA_DIR=/data/private/dataset/beir 
+export DATA_DIR=/data/private/sunsi/dataset/beir 
 # Folders of dataset files (Placed under DATA_DIR by default).
-dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scidocs scifact nq hotpotqa signal1m trec-news robust04 dbpedia-entity fever climate-fever bioasq) 
+dataset_name_list=(nfcorpus fiqa) 
 
 # ## *************************************
 # # The CQADupStack dataset contains 12 small datasets.
