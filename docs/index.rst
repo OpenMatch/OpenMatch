@@ -15,7 +15,7 @@ Welcome to OpenMatch's documentation!
    Openmatch-ANCE-Tele
    model_downloads
    scale-t5-weights
-   
+   BEIR-Evaluation
 
 
 Indices and tables
