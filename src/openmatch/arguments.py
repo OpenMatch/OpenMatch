@@ -232,6 +232,11 @@ class InferenceArguments(TrainingArguments):
 
     max_inmem_docs: int = field(default=10000000, metadata={
                                 "help": "max number of docs to keep in memory"})
+    
+    use_split_search: bool = field(
+        default=False, 
+        metadata={"help": "whether to split the entire corpus search into multiple sub-search jobs."}
+    )
 
 
 @dataclass

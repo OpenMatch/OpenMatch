@@ -13,9 +13,9 @@ Welcome to OpenMatch's documentation!
    dr-msmarco-passage
    rr-msmarco-passage
    Openmatch-ANCE-Tele
+   BEIR-Evaluation
    model_downloads
    scale-t5-weights
-   
 
 
 Indices and tables
