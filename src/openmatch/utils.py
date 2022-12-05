@@ -175,6 +175,36 @@ def load_from_trec(input_path: str, as_list: bool = False, max_len_per_q: int = 
     return rank_result
 
 
+def load_positives(relevance_file, threshold=1):
+    qrel = {}
+    with open(relevance_file, encoding='utf8') as f:
+        tsvreader = csv.reader(f, delimiter="\t")
+        for [topicid, _, docid, rel] in tsvreader:
+            rel = int(rel)
+            if rel >= threshold:
+                if topicid in qrel:
+                    qrel[topicid].append(docid)
+                else:
+                    qrel[topicid] = [docid]
+    return qrel
+
+
+def load_beir_positives(qrels_file, threshold=1):
+    qrels = {}
+    with open(qrels_file) as f:
+        tsvreader = csv.DictReader(f, delimiter="\t")
+        for row in tsvreader:
+            qid = row["query-id"]
+            pid = row["corpus-id"]
+            rel = int(row["score"])
+            if rel >= threshold:
+                if qid in qrels:
+                    qrels[qid].append(pid)
+                else:
+                    qrels[qid] = [pid]
+    return qrels
+
+
 def find_all_markers(template: str):
     """
     Find all markers' names (quoted in "<>") in a template.

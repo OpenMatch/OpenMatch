@@ -8,7 +8,7 @@ from openmatch.arguments import ModelArguments
 from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
-from openmatch.utils import save_as_trec, get_delta_model_class
+from openmatch.utils import save_as_trec, get_delta_model_class, load_positives, load_beir_positives
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
 logger = logging.getLogger(__name__)
@@ -16,10 +16,13 @@ logger = logging.getLogger(__name__)
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
+    parser.add_argument("--add_ground_truth", action="store_true")
+    parser.add_argument("--qrels", type=str, default=None)
+    parser.add_argument("--beir", action="store_true")
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, encoding_args, other_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, encoding_args, other_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
         data_args: DataArguments
         encoding_args: EncodingArguments
@@ -82,7 +85,16 @@ def main():
     retriever = Retriever.from_embeddings(model, encoding_args)
     result = retriever.retrieve(query_dataset, encoding_args.retrieve_depth)
     if encoding_args.local_process_index == 0:
-        save_as_trec(result, encoding_args.trec_save_path)
+        if not other_args.add_ground_truth:
+            save_as_trec(result, encoding_args.trec_save_path)
+        else:
+            positives = load_beir_positives(other_args.qrels) if other_args.beir else load_positives(other_args.qrels)
+            # insert ground truth
+            for query_id, query_result in result.items():
+                if query_id in positives:
+                    for positive in positives[query_id]:
+                        query_result[positive] = 1000
+            save_as_trec(result, encoding_args.trec_save_path)
 
 
 if __name__ == '__main__':
