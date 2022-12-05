@@ -1,5 +1,5 @@
 export OUTPUT_DIR=/data/private/experiments # Path to store evaluation results.
-export train_job_name=cocodr-base-msmarco # Folder to store evaluation results.
+export train_job_name=cocodr-base-msmarco # Folder of model files (Placed under OUTPUT_DIR by default).
 ## *************************************
 ## GPU setup
 TOT_CUDA="1,2,3,4"
@@ -7,14 +7,21 @@ CUDAs=(${TOT_CUDA//,/ })
 CUDA_NUM=${#CUDAs[@]}
 PORT="1234"
 ## *************************************
+## 17 BEIR Datasets.
+## *************************************
+# Path to store dataset files.
+export DATA_DIR=/data/private/dataset/beir 
+# Folders of dataset files (Placed under DATA_DIR by default).
+dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scidocs scifact nq hotpotqa signal1m trec-news robust04 dbpedia-entity fever climate-fever bioasq) 
 
-## 17 BEIR Datasets
-export DATA_DIR=/data/private/dataset/beir # Path to store dataset files
-dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scidocs scifact nq hotpotqa signal1m trec-news robust04 dbpedia-entity fever climate-fever bioasq)
-
+# ## *************************************
 # # The CQADupStack dataset contains 12 small datasets.
+# ## *************************************
+# # Path to store CQADupStack dataset files.
 # export DATA_DIR=/data/private/dataset/beir/cqadupstack
-# dataset_name_list=(android english gaming gis mathematica physics programmers stats tex unix webmasters wordpress)
+# # Folders of dataset files (Placed under DATA_DIR by default).
+# dataset_name_list=(android english gaming gis mathematica physics programmers stats tex unix webmasters wordpress) 
+
 
 for dataset_name in ${dataset_name_list[@]}
 do
@@ -39,8 +46,8 @@ do
         --fp16 \
         --use_gpu \
         --overwrite_output_dir \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
     
     
     elif [ ${dataset_name} == arguana ]
@@ -63,8 +70,8 @@ do
         --use_gpu \
         --overwrite_output_dir \
         --remove_identical \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
     
     elif [ ${dataset_name} == quora ]
     then
@@ -86,8 +93,8 @@ do
         --use_gpu \
         --overwrite_output_dir \
         --remove_identical \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
     
     
     elif [ ${dataset_name} == scifact ] || [ ${dataset_name} == trec-news ]
@@ -109,8 +116,8 @@ do
         --fp16 \
         --use_gpu \
         --overwrite_output_dir \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
         
         
     
@@ -134,8 +141,8 @@ do
         --fp16 \
         --use_gpu \
         --overwrite_output_dir \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
     
     
     else
@@ -156,8 +163,8 @@ do
         --fp16 \
         --use_gpu \
         --overwrite_output_dir \
-        --use_split_search \
-        --max_inmem_docs 5000000 \
+        # --use_split_search \
+        # --max_inmem_docs 5000000 \
         
     fi
 done

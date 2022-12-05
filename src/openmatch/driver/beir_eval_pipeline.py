@@ -95,7 +95,7 @@ def main():
         # Save trec file
         if encoding_args.trec_save_path is None:
             encoding_args.trec_save_path = os.path.join(encoding_args.output_dir, "test.trec")
-        save_as_trec(result, encoding_args.trec_save_path)
+        save_as_trec(run, encoding_args.trec_save_path)
         
         # compute metric
         evaluator = pytrec_eval.RelevanceEvaluator(

@@ -10,23 +10,24 @@ For 18 datasets in BEIR, 15 of them can be directly loaded via OpenMatch. Howeve
 
 * `hotpotqa` and `fever` need to filter out the 'metadata' in the `queries.jsonl` file, otherwise an error will be reported when loading.
 * `robust04` requires the following filtering operations in the `corpus.jsonl` file:
-```
-text = re.sub(r"[^A-Za-z0-9=(),!?\'\`]", " ", data['text'])
-text = " ".join(text.split())
-```
-
-
+    ```
+    ## robust04
+    text = re.sub(r"[^A-Za-z0-9=(),!?\'\`]", " ", data['text'])
+    text = " ".join(text.split())
+    ```
+    
 ## Evaluation
 
-Here we use the `TREC-COVID` dataset as an example to describe the evaluation method.
+Here we use the `trec-covid` dataset as an example to describe the evaluation method. If you want to test all 18 datasets at once, you can run the shell script `OpenMatch/scripts/BEIR/eval_beir.sh`
 
 ```bash
 ## *************************************
+## Model
 export OUTPUT_DIR=/data/private/experiments # Path to store evaluation results.
-export train_job_name=cocodr-base-msmarco # Folder to store evaluation results.
-
-export DATA_DIR=/data/private/dataset/beir # Path to store dataset files
-export dataset_name=trec-covid
+export train_job_name=cocodr-base-msmarco # Folder of model files (Placed under OUTPUT_DIR by default).
+## Dataset
+export DATA_DIR=/data/private/dataset/beir # Path to store dataset files.
+export dataset_name=trec-covid # Folder of dataset files (Placed under DATA_DIR by default).
 ## *************************************
 ## GPU setup
 TOT_CUDA="1,2,3,4"
@@ -34,10 +35,10 @@ CUDAs=(${TOT_CUDA//,/ })
 CUDA_NUM=${#CUDAs[@]}
 PORT="1234"
 ## *************************************
-
 export q_max_len=64
 export p_max_len=128
-echo ${infer_job_name}
+export infer_job_name=inference.${train_job_name}.${dataset_name}
+## *************************************
 
 CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
 --data_dir ${DATA_DIR}/${dataset_name} \
@@ -55,6 +56,3 @@ CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.l
 --use_split_search \
 --max_inmem_docs 5000000 \
 ```
-
-
-If you want to test all 18 datasets at once, you can use the shell script `OpenMatch/scripts/BEIR/eval_beir.sh`
