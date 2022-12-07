@@ -1,4 +1,5 @@
 import copy
+import importlib
 import json
 import logging
 import os
@@ -10,14 +11,14 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-from transformers import (AutoModel, BatchEncoding, PreTrainedModel,
-                          T5EncoderModel, PreTrainedTokenizer, AutoConfig, T5ForConditionalGeneration)
+from transformers import (AutoConfig, AutoModel, BatchEncoding,
+                          PreTrainedModel, PreTrainedTokenizer, T5EncoderModel,
+                          T5ForConditionalGeneration)
 from transformers.modeling_outputs import ModelOutput
 
-from ..arguments import DataArguments
+from ..arguments import DataArguments, ModelArguments
 from ..arguments import RRTrainingArguments as TrainingArguments
-from ..arguments import ModelArguments
-from ..loss import rr_loss_functions, CrossEntropyLoss
+from ..loss import CrossEntropyLoss, rr_loss_functions
 from ..utils import mean_pooling
 from .linear import LinearHead
 
@@ -32,10 +33,11 @@ class RROutput(ModelOutput):
 
 
 class RRModel(nn.Module):
+
     def __init__(
             self,
             lm: PreTrainedModel,
-            head: nn.Module,
+            head: nn.Module = None,
             feature: str = "last_hidden_state",
             pooling: str = "first",
             pos_token: str = None,
@@ -56,8 +58,10 @@ class RRModel(nn.Module):
         self.pos_token = pos_token
         self.neg_token = neg_token
         self.tokenizer = tokenizer
-        self.pos_token_id = tokenizer.encode(self.pos_token, add_special_tokens=False)[0] if self.pos_token else None
-        self.neg_token_id = tokenizer.encode(self.neg_token, add_special_tokens=False)[0] if self.neg_token else None
+        self.pos_token_id = tokenizer.encode(self.pos_token, add_special_tokens=False)[
+            0] if self.pos_token else None
+        self.neg_token_id = tokenizer.encode(self.neg_token, add_special_tokens=False)[
+            0] if self.neg_token else None
 
         self.model_args = model_args
         self.data_args = data_args
@@ -93,7 +97,8 @@ class RRModel(nn.Module):
         neg_pair_scores = self.encode(neg_pairs)
 
         if self.loss_fn_str in ["mr", "smr"]:
-            loss = self.loss_fn(pos_pair_scores, neg_pair_scores, margin=self.margin)
+            loss = self.loss_fn(
+                pos_pair_scores, neg_pair_scores, margin=self.margin)
         else:
             loss = self.loss_fn(pos_pair_scores, neg_pair_scores)
 
@@ -108,10 +113,13 @@ class RRModel(nn.Module):
             return None, None
         items = BatchEncoding(items)
         if "T5" in type(self.lm).__name__ and not self.model_args.encoder_only:
-            decoder_input_ids = torch.zeros((items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
-            items_out = self.lm(**items, decoder_input_ids=decoder_input_ids, return_dict=True)
+            decoder_input_ids = torch.zeros(
+                (items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
+            items_out = self.lm(
+                **items, decoder_input_ids=decoder_input_ids, return_dict=True)
             logits = items_out.logits
-            scores = logits[:, 0, [self.neg_token_id, self.pos_token_id]]  # batch_size * 2
+            scores = logits[:, 0, [self.neg_token_id,
+                                   self.pos_token_id]]  # batch_size * 2
         else:
             items_out = self.lm(**items, return_dict=True)
             hidden = getattr(items_out, self.feature)
@@ -119,9 +127,12 @@ class RRModel(nn.Module):
                 reps = hidden[:, 0, :]
             elif self.pooling == "mean":
                 reps = mean_pooling(hidden, items.attention_mask)
+            elif self.pooling == "no":
+                reps = hidden
             else:
-                raise ValueError("Unknown pooling type: {}".format(self.pooling))
-            scores = self.head(reps)  # batch_size * 1
+                raise ValueError(
+                    "Unknown pooling type: {}".format(self.pooling))
+            scores = self.head(reps)  if self.head is not None else reps  # batch_size * 1
         return scores
 
     @classmethod
@@ -136,28 +147,38 @@ class RRModel(nn.Module):
         # load local
         config = None
         model_class = None
-        hf_config = AutoConfig.from_pretrained(model_args.model_name_or_path, **hf_kwargs)
-        if model_args.encoder_only:
-            model_class = T5EncoderModel
-        elif "T5" in hf_config.architectures[0]:  # Pre-trained T5 model
-            model_class = T5ForConditionalGeneration
-        else:
-            model_class = AutoModel
-            
+
         if os.path.exists(os.path.join(model_args.model_name_or_path, "openmatch_config.json")):
             with open(os.path.join(model_args.model_name_or_path, "openmatch_config.json")) as f:
                 config = json.load(f)
 
-        if os.path.isdir(model_args.model_name_or_path) and config is not None:  # not a raw Huggingface model
-            logger.info(f'loading reranking model weight from {model_args.model_name_or_path}')
+        # an OpenMatch model
+        if os.path.isdir(model_args.model_name_or_path) and config is not None:
+            logger.info(
+                f'loading reranking model weight from {model_args.model_name_or_path}')
+            model_name = config["plm_backbone"]["type"]
+            model_class = getattr(
+                importlib.import_module("transformers"), model_name)
             lm = model_class.from_pretrained(
                 model_args.model_name_or_path,
                 **hf_kwargs
             )
-            head = LinearHead.load(ckpt_dir=model_args.model_name_or_path)
+            head = LinearHead.load(ckpt_dir=model_args.model_name_or_path) if os.path.exists(
+                os.path.join(model_args.model_name_or_path, "head_config.json")) else None
         else:  # a Huggingface model
-            lm = model_class.from_pretrained(model_args.model_name_or_path, **hf_kwargs)
-            head = LinearHead(model_args.projection_in_dim, 1)
+            hf_config = AutoConfig.from_pretrained(
+                model_args.model_name_or_path, **hf_kwargs)
+            if model_args.encoder_only:
+                model_class = T5EncoderModel
+                head = LinearHead(model_args.projection_in_dim, 1)
+            elif "T5" in hf_config.architectures[0]:  # Pre-trained T5 model
+                model_class = T5ForConditionalGeneration
+                head = None
+            else:
+                model_class = AutoModel
+                head = LinearHead(model_args.projection_in_dim, 1)
+            lm = model_class.from_pretrained(
+                model_args.model_name_or_path, **hf_kwargs)
 
         model = cls(
             lm=lm,

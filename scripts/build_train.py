@@ -7,11 +7,12 @@ import random
 from datetime import datetime
 from functools import partial
 
-from openmatch.arguments import DataArguments
-from openmatch.dataset import InferenceDataset
-from openmatch.utils import load_from_trec
 from tqdm import tqdm
 from transformers import AutoTokenizer, HfArgumentParser
+
+from openmatch.arguments import DataArguments
+from openmatch.dataset import InferenceDataset
+from openmatch.utils import load_beir_positives, load_from_trec, load_positives
 
 
 def get_positive_and_negative_samples(query_dataset, corpus_dataset, qrel, n_sample, depth, q_and_docs):
@@ -32,35 +33,6 @@ def get_positive_and_negative_samples(query_dataset, corpus_dataset, qrel, n_sam
             return None
     else:
         return None
-
-
-def read_qrel(relevance_file):
-    qrel = {}
-    with open(relevance_file, encoding='utf8') as f:
-        tsvreader = csv.reader(f, delimiter="\t")
-        for [topicid, _, docid, rel] in tsvreader:
-            assert rel == "1"
-            if topicid in qrel:
-                qrel[topicid].append(docid)
-            else:
-                qrel[topicid] = [docid]
-    return qrel
-
-
-def load_beir_qrels(qrels_file):
-    qrels = {}
-    with open(qrels_file) as f:
-        tsvreader = csv.DictReader(f, delimiter="\t")
-        for row in tsvreader:
-            qid = row["query-id"]
-            pid = row["corpus-id"]
-            rel = int(row["score"])
-            if rel >= 1:
-                if qid in qrels:
-                    qrels[qid].append(pid)
-                else:
-                    qrels[qid] = [pid]
-    return qrels
 
 
 def process_one(query_dataset, corpus_dataset, q, poss, negs):
@@ -100,7 +72,7 @@ corpus_dataset = InferenceDataset.load(
     full_tokenization=False,
     stream=False
 )
-qrel = read_qrel(other_args.qrels_file) if not other_args.beir else load_beir_qrels(other_args.qrels_file)
+qrel = load_positives(other_args.qrels_file) if not other_args.beir else load_beir_positives(other_args.qrels_file)
 run = load_from_trec(other_args.hn_file, as_list=True)
 run_list = []
 for qid, rank_list in run.items():

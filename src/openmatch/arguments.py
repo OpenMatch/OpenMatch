@@ -141,6 +141,11 @@ class DataArguments:
         metadata={"help": "all markers in the template"}
     )
 
+    encode_as_text_pair: bool = field(
+        default=False,
+        metadata={"help": "Whether to encode the query and passage as a text pair"}
+    )
+
 
 @dataclass
 class DRTrainingArguments(TrainingArguments):

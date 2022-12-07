@@ -11,7 +11,7 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 from transformers.trainer_pt_utils import IterableDatasetShard
 
-from ..arguments import InferenceArguments as EncodingArguments
+from ..arguments import DataArguments, InferenceArguments as EncodingArguments
 from ..dataset import InferenceDataset, RRInferenceCollator
 from ..modeling import RRModel
 from ..utils import (load_from_trec, merge_retrieval_results_by_score,
@@ -20,7 +20,14 @@ from ..utils import (load_from_trec, merge_retrieval_results_by_score,
 logger = logging.getLogger(__name__)
 
 
-def encode_pair(tokenizer, item1, item2, max_len_1=32, max_len_2=128):
+def encode_pair(tokenizer, item1, item2, max_len_1=32, max_len_2=128, encode_as_text_pair=False):
+    if encode_as_text_pair:
+        return tokenizer.encode_plus(
+            item1, item2,
+            truncation='longest_first',
+            padding='max_length',
+            max_length=max_len_1 + max_len_2 + 2,
+        )
     return tokenizer.encode_plus(
         item1 + item2,
         truncation='longest_first',
@@ -43,30 +50,31 @@ class RRPredictDataset(IterableDataset):
         tokenizer: PreTrainedTokenizer, 
         query_dataset: InferenceDataset, 
         corpus_dataset: InferenceDataset, 
-        run: Dict[str, Dict[str, float]]
+        run: Dict[str, Dict[str, float]],
+        encode_as_text_pair: bool = False
     ):
         super(RRPredictDataset, self).__init__()
         self.tokenizer = tokenizer
         self.query_dataset = query_dataset
         self.corpus_dataset = corpus_dataset
         self.run = run
+        self.encode_as_text_pair = encode_as_text_pair
 
     def __iter__(self):
-        def gen_q_d_pair():
-            for qid, did_and_scores in self.run.items():
-                for did, _ in did_and_scores.items():
-                    yield {
-                        "query_id": qid, 
-                        "doc_id": did, 
-                        **encode_pair(
-                            self.tokenizer, 
-                            self.query_dataset[qid]["input_ids"], 
-                            self.corpus_dataset[did]["input_ids"], 
-                            self.query_dataset.max_len, 
-                            self.corpus_dataset.max_len
-                        ),
-                    }
-        return gen_q_d_pair()
+        for qid, did_and_scores in self.run.items():
+            for did, _ in did_and_scores.items():
+                yield {
+                    "query_id": qid, 
+                    "doc_id": did, 
+                    **encode_pair(
+                        self.tokenizer, 
+                        self.query_dataset[qid]["input_ids"], 
+                        self.corpus_dataset[did]["input_ids"], 
+                        self.query_dataset.max_len, 
+                        self.corpus_dataset.max_len,
+                        encode_as_text_pair=self.encode_as_text_pair
+                    ),
+                }
 
 
 class Reranker:
@@ -76,20 +84,22 @@ class Reranker:
         model: RRModel, 
         tokenizer: PreTrainedTokenizer, 
         corpus_dataset: Dataset, 
-        args: EncodingArguments
+        args: EncodingArguments,
+        data_args: DataArguments
     ):
         logger.info("Initializing reranker")
         self.model = model
         self.tokenizer = tokenizer
         self.corpus_dataset = corpus_dataset
         self.args = args
+        self.data_args = data_args
 
         self.model = model.to(self.args.device)
         self.model.eval()
 
     def rerank(self, query_dataset: InferenceDataset, run: Dict[str, Dict[str, float]]):
         return_dict = {}
-        dataset = RRPredictDataset(self.tokenizer, query_dataset, self.corpus_dataset, run)
+        dataset = RRPredictDataset(self.tokenizer, query_dataset, self.corpus_dataset, run, self.data_args.encode_as_text_pair)
         if self.args.world_size > 1:
             dataset = IterableDatasetShard(
                 dataset,

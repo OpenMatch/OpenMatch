@@ -235,14 +235,24 @@ class MappingDRPretrainDataset(MappingTrainDatasetMixin, DRPretrainDataset):
 class RRTrainDataset(TrainDatasetBase):
 
     def create_one_example(self, qry_encoding, psg_encoding) -> BatchEncoding:
-        item = self.tokenizer.encode_plus(
-            qry_encoding + psg_encoding,
-            truncation='longest_first',
-            max_length=self.data_args.q_max_len + self.data_args.p_max_len + 2,
-            padding=False,
-            return_attention_mask=False,
-            return_token_type_ids=False,
-        )
+        if self.data_args.encode_as_text_pair:
+            item = self.tokenizer.encode_plus(
+                qry_encoding, psg_encoding,
+                truncation='longest_first',
+                max_length=self.data_args.q_max_len + self.data_args.p_max_len + 2,
+                padding=False,
+                return_attention_mask=False,
+                return_token_type_ids=True,
+            )
+        else:
+            item = self.tokenizer.encode_plus(
+                qry_encoding + psg_encoding,
+                truncation='longest_first',
+                max_length=self.data_args.q_max_len + self.data_args.p_max_len + 2,
+                padding=False,
+                return_attention_mask=False,
+                return_token_type_ids=False,
+            )
         return item
 
     def get_process_fn(self, epoch, hashed_seed):

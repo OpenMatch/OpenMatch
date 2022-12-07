@@ -80,7 +80,7 @@ def main():
 
     run = load_from_trec(inference_args.trec_run_path, max_len_per_q=inference_args.reranking_depth)
 
-    reranker = Reranker(model, tokenizer, corpus_dataset, inference_args)
+    reranker = Reranker(model, tokenizer, corpus_dataset, inference_args, data_args)
     result = reranker.rerank(query_dataset, run)
 
     if inference_args.local_process_index == 0:
