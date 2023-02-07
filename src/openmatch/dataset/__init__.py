@@ -1,4 +1,4 @@
 from .beir_dataset import BEIRDataset
-from .data_collator import DRInferenceCollator, QPCollator, PairCollator, DistillationCollator, RRInferenceCollator
+from .data_collator import DRInferenceCollator, QPCollator, PairCollator, PairwiseDistillationCollator, ListwiseDistillationCollator, RRInferenceCollator
 from .inference_dataset import StreamJsonlDataset, StreamTsvDataset, MappingJsonlDataset, MappingTsvDataset, InferenceDataset
-from .train_dataset import StreamDRTrainDataset, MappingDRTrainDataset, StreamDRPretrainDataset, MappingDRPretrainDataset, StreamRRTrainDataset, MappingRRTrainDataset, StreamQGTrainDataset, MappingQGTrainDataset, StreamDistillationTrainDataset, MappingDistillationTrainDataset
+from .train_dataset import StreamDRTrainDataset, MappingDRTrainDataset, StreamDRPretrainDataset, MappingDRPretrainDataset, StreamRRTrainDataset, MappingRRTrainDataset, StreamQGTrainDataset, MappingQGTrainDataset, StreamPairwiseDistillationTrainDataset, MappingPairwiseDistillationTrainDataset, StreamListwiseDistillationTrainDataset, MappingListwiseDistillationTrainDataset

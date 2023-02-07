@@ -78,7 +78,7 @@ class SimpleTrainPreProcessor:
         return query_encoded
 
     def get_passage(self, p):
-        entry = self.collection[int(p)]
+        entry = self.collection[int(p)] if p != "None" else self.collection[0]
         title = entry[self.title_field]
         title = "" if title is None else title
         body = entry[self.text_field]

@@ -329,7 +329,7 @@ class MappingQGTrainDataset(MappingTrainDatasetMixin, QGTrainDataset):
     pass
 
 
-class DistillationTrainDataset(TrainDatasetBase):
+class PairwiseDistillationTrainDataset(TrainDatasetBase):
 
     def create_one_example(self, text_encoding: List[int], is_query=False) -> BatchEncoding:
         item = self.tokenizer.encode_plus(
@@ -354,9 +354,69 @@ class DistillationTrainDataset(TrainDatasetBase):
         return process_fn
 
 
-class StreamDistillationTrainDataset(StreamTrainDatasetMixin, DistillationTrainDataset):
+class StreamPairwiseDistillationTrainDataset(StreamTrainDatasetMixin, PairwiseDistillationTrainDataset):
     pass
 
 
-class MappingDistillationTrainDataset(MappingTrainDatasetMixin, DistillationTrainDataset):
+class MappingPairwiseDistillationTrainDataset(MappingTrainDatasetMixin, PairwiseDistillationTrainDataset):
+    pass
+
+
+class ListwiseDistillationTrainDataset(TrainDatasetBase):
+
+    def create_one_example(self, text_encoding: List[int], is_query=False) -> BatchEncoding:
+        item = self.tokenizer.encode_plus(
+            text_encoding,
+            truncation='only_first',
+            max_length=self.data_args.q_max_len if is_query else self.data_args.p_max_len,
+            padding=False,
+            return_attention_mask=False,
+            return_token_type_ids=False,
+        )
+        return item
+
+    def get_process_fn(self, epoch, hashed_seed):
+
+        def process_fn(example):
+            qry = example['query']
+            encoded_query = self.create_one_example(qry, is_query=True)
+            encoded_passages = []
+            passages = example['docs']
+            scores = example['scores']
+            passages_and_scores = list(zip(passages, scores))
+
+            if len(passages) < self.data_args.train_n_passages:
+                if hashed_seed is not None:
+                    psgs = random.choices(passages_and_scores, k=self.data_args.train_n_passages)
+                else:
+                    psgs = [x for x in passages_and_scores]
+                    psgs = psgs * 2
+                    psgs = psgs[:self.data_args.train_n_passages]
+            else:
+                _offset = epoch * self.data_args.train_n_passages % len(passages)
+                psgs = [x for x in passages_and_scores]
+                if hashed_seed is not None:
+                    random.Random(hashed_seed).shuffle(psgs)
+                psgs = psgs * 2
+                psgs = psgs[_offset: _offset + self.data_args.train_n_passages]
+
+            for psg in psgs:
+                encoded_passages.append(self.create_one_example(psg[0]))
+
+            assert len(encoded_passages) == self.data_args.train_n_passages
+
+            return {
+                "query_": encoded_query, 
+                "passages": encoded_passages,
+                "scores_": [x[1] for x in psgs]
+            }  # Avoid name conflict with query in the original dataset
+
+        return process_fn
+
+
+class StreamListwiseDistillationTrainDataset(StreamTrainDatasetMixin, ListwiseDistillationTrainDataset):
+    pass
+
+
+class MappingListwiseDistillationTrainDataset(MappingTrainDatasetMixin, ListwiseDistillationTrainDataset):
     pass

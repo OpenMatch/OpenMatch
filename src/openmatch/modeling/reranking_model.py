@@ -171,7 +171,7 @@ class RRModel(nn.Module):
             if model_args.encoder_only:
                 model_class = T5EncoderModel
                 head = LinearHead(model_args.projection_in_dim, 1)
-            elif "T5" in hf_config.architectures[0]:  # Pre-trained T5 model
+            elif hf_config.architectures is not None and "T5" in hf_config.architectures[0]:  # Pre-trained T5 model
                 model_class = T5ForConditionalGeneration
                 head = None
             else:

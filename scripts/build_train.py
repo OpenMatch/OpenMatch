@@ -25,9 +25,9 @@ def get_positive_and_negative_samples(query_dataset, corpus_dataset, qrel, n_sam
             negatives.append(docid)
     negatives = negatives[:depth]
     random.shuffle(negatives)
-    if (len(origin_positives)) >= 1 and len(negatives) >= 1:
+    if (len(origin_positives)) >= 1:
         item = process_one(query_dataset, corpus_dataset, qid, origin_positives, negatives[:n_sample])
-        if item["positives"] and item["negatives"]:
+        if item["positives"]:
             return item
         else:
             return None
@@ -48,7 +48,7 @@ def process_one(query_dataset, corpus_dataset, q, poss, negs):
 random.seed(datetime.now())
 parser = HfArgumentParser(DataArguments)
 parser.add_argument('--tokenizer_name', required=True)
-parser.add_argument('--hn_file', required=True)
+parser.add_argument('--hn_file', type=str, default=None)
 parser.add_argument("--qrels_file", type=str, required=True)
 parser.add_argument('--save_to', required=True)
 parser.add_argument('--n_sample', type=int, default=40)
@@ -73,10 +73,14 @@ corpus_dataset = InferenceDataset.load(
     stream=False
 )
 qrel = load_positives(other_args.qrels_file) if not other_args.beir else load_beir_positives(other_args.qrels_file)
-run = load_from_trec(other_args.hn_file, as_list=True)
 run_list = []
-for qid, rank_list in run.items():
-    run_list.append((qid, rank_list))
+if other_args.hn_file is not None:
+    run = load_from_trec(other_args.hn_file, as_list=True)
+    for qid, rank_list in run.items():
+        run_list.append((qid, rank_list))
+else:
+    for qid in query_dataset.dataset.keys():
+        run_list.append((qid, []))
 
 get_positive_and_negative_samples_partial = partial(
                                                 get_positive_and_negative_samples, 
