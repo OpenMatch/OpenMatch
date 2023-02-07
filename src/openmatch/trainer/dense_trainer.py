@@ -106,8 +106,12 @@ class DRTrainer(Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False):
         if self.args.distillation:
-            query, positive, negative, score = inputs
-            outputs = model(query=query, positive=positive, negative=negative, score=score)
+            if self.args.distil_mode == "pairwise":
+                query, positive, negative, score = inputs
+                outputs = model(query=query, positive=positive, negative=negative, score=score)
+            else:  # listwise
+                query, passage, score = inputs
+                outputs = model(query=query, passage=passage, score=score)
         else:
             query, passage = inputs
             outputs = model(query=query, passage=passage)

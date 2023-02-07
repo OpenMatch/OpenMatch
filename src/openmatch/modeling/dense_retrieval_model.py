@@ -67,7 +67,11 @@ class DRModel(nn.Module):
 
 
         if train_args is not None: 
-            self.loss_fn = nn.MSELoss() if train_args.distillation else nn.CrossEntropyLoss(reduction='mean')
+            if train_args.distillation:
+                self.loss_fn = nn.MSELoss() if train_args.distil_mode == "pairwise" else nn.KLDivLoss()
+            else:
+                self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
+            
             if train_args.negatives_x_device:
                 if not dist.is_initialized():
                     raise ValueError('Distributed training has not been initialized for representation all gather.')
@@ -96,18 +100,38 @@ class DRModel(nn.Module):
             score: Tensor = None,
     ):
 
-        q_hidden, q_reps = self.encode_query(query)
+        q_hidden, q_reps = self.encode_query(query)  # (batch_size, hidden_size)
 
         if self.train_args.distillation:
 
-            pos_hidden, pos_reps = self.encode_passage(positive)
-            neg_hidden, neg_reps = self.encode_passage(negative)
-            scores_pos = torch.sum(q_reps * pos_reps, dim=1)
-            scores_neg = torch.sum(q_reps * neg_reps, dim=1)
-            margin_pred = scores_pos - scores_neg
-            # print(margin_pred, score)
-            loss = self.loss_fn(margin_pred, score)
-            return DROutput(q_reps=q_reps, p_reps=pos_reps, loss=loss, scores=torch.stack([scores_pos, scores_neg], dim=1))
+            if self.train_args.distil_mode == "pairwise":
+
+                pos_hidden, pos_reps = self.encode_passage(positive)
+                neg_hidden, neg_reps = self.encode_passage(negative)
+                scores_pos = torch.sum(q_reps * pos_reps, dim=1)
+                scores_neg = torch.sum(q_reps * neg_reps, dim=1)
+                margin_pred = scores_pos - scores_neg
+                # print(margin_pred, score)
+                loss = self.loss_fn(margin_pred, score)
+                return DROutput(q_reps=q_reps, p_reps=pos_reps, loss=loss, scores=torch.stack([scores_pos, scores_neg], dim=1))
+
+            else:  # listwise
+                # print(score.shape)
+                # print(score)
+                p_hidden, p_reps = self.encode_passage(passage)  # (batch_size * n_passages, hidden_size)
+                batch_size = q_reps.shape[0]
+                p_reps = p_reps.view(batch_size, -1, p_reps.shape[-1])  # (batch_size, n_passages, hidden_size)
+                q_reps_expanded = q_reps.unsqueeze(1).expand(-1, p_reps.shape[1], -1)  # (batch_size, n_passages, hidden_size)
+                scores_pred = torch.sum(q_reps_expanded * p_reps, dim=2)  # (batch_size, n_passages)
+                # print(scores_pred)
+                scores_pred = F.log_softmax(scores_pred, dim=1)
+                # print(scores_pred)
+                # print(score)
+                score = F.softmax(score, dim=1)
+                # print(score)
+                # exit(0)
+                loss = self.loss_fn(scores_pred, score)
+                return DROutput(q_reps=q_reps, p_reps=p_reps, loss=loss, scores=scores_pred)
 
         else:
 

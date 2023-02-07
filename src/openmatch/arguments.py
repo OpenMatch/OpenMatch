@@ -164,6 +164,7 @@ class DRTrainingArguments(TrainingArguments):
     gc_q_chunk_size: int = field(default=4)
     gc_p_chunk_size: int = field(default=32)
     distillation: bool = field(default=False, metadata={"help": "Use distillation"})
+    distil_mode: str = field(default="pairwise", metadata={"help": "Distillation mode"})
 
 
 @dataclass

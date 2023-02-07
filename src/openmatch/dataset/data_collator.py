@@ -77,7 +77,7 @@ class PairCollator(DataCollatorWithPadding):
 
 
 @dataclass
-class DistillationCollator(DataCollatorWithPadding):
+class PairwiseDistillationCollator(DataCollatorWithPadding):
 
     max_q_len: int = 32
     max_p_len: int = 128
@@ -114,9 +114,41 @@ class DistillationCollator(DataCollatorWithPadding):
             return_tensors="pt",
         )
         scores_collated = torch.tensor(scores)
-        # print(q_collated, positives_collated, negatives_collated, scores_collated)
 
         return q_collated, positives_collated, negatives_collated, scores_collated
+
+
+@dataclass
+class ListwiseDistillationCollator(DataCollatorWithPadding):
+
+    max_q_len: int = 32
+    max_p_len: int = 128
+
+    def __call__(self, features):
+        qq = [f["query_"] for f in features]
+        dd = [f["passages"] for f in features]
+        scores = [f["scores_"] for f in features]
+
+        if isinstance(qq[0], list):
+            qq = sum(qq, [])
+        if isinstance(dd[0], list):
+            dd = sum(dd, [])
+
+        q_collated = self.tokenizer.pad(
+            qq,
+            padding='max_length',
+            max_length=self.max_q_len,
+            return_tensors="pt",
+        )
+        d_collated = self.tokenizer.pad(
+            dd,
+            padding='max_length',
+            max_length=self.max_p_len,
+            return_tensors="pt",
+        )
+        scores_collated = torch.tensor(scores)
+
+        return q_collated, d_collated, scores_collated
 
 
 @dataclass
