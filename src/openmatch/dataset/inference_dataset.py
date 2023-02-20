@@ -13,7 +13,13 @@ from ..utils import fill_template, find_all_markers
 
 
 def get_idx(obj):
-    example_id = obj.get("_id", None) or obj.get("id", None) or obj.get("text_id", None)
+    example_id = obj.get("_id", None)
+    if example_id is None: 
+        example_id = obj.get("id", None)
+    if example_id is None:
+        example_id = obj.get("text_id", None)
+    if example_id is None:
+        raise ValueError("No id field found in data, tried `_id`, `id`, `text_id`")
     example_id = str(example_id) if example_id is not None else None
     return example_id
 
