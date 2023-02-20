@@ -196,7 +196,8 @@ class RRModel(nn.Module):
 
     def save(self, output_dir: str):
         self.lm.save_pretrained(output_dir)
-        self.head.save(output_dir)
+        if self.head is not None:
+            self.head.save(output_dir)
 
         with open(os.path.join(output_dir, 'openmatch_config.json'), 'w') as f:
             json.dump(self._get_config_dict(), f, indent=4)
