@@ -33,7 +33,7 @@ corpus_dataset = InferenceDataset.load(
     full_tokenization=False,
     stream=False
 )
-qrels = load_beir_positives(other_args.qrels_file) if other_args.beir else load_positives(other_args.qrels)
+qrels = load_beir_positives(other_args.qrels_file) if other_args.beir else load_positives(other_args.qrels_file)
 run = load_from_trec(other_args.trec_file)
 
 save_dir = os.path.split(other_args.save_to)[0]
@@ -42,6 +42,8 @@ if not os.path.exists(save_dir):
 
 with open(other_args.save_to, "w") as fout:
     for qid, doc_dict in tqdm(run.items()):
+        if qid not in qrels:
+            continue
         pos_doc = qrels[qid][0]
         pos_doc_score = doc_dict[pos_doc]
         negs = list(doc_dict.items())
