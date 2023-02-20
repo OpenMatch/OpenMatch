@@ -219,7 +219,7 @@ class DRPretrainDataset(TrainDatasetBase):
             encoded_query = self.create_one_example(content, is_query=True)
             encoded_passages = [self.create_one_example(content)]
 
-            return {"query": encoded_query, "passages": encoded_passages}
+            return {"query_": encoded_query, "passages": encoded_passages}
 
         return process_fn
 
