@@ -111,25 +111,17 @@ class DRModel(nn.Module):
                 scores_pos = torch.sum(q_reps * pos_reps, dim=1)
                 scores_neg = torch.sum(q_reps * neg_reps, dim=1)
                 margin_pred = scores_pos - scores_neg
-                # print(margin_pred, score)
                 loss = self.loss_fn(margin_pred, score)
                 return DROutput(q_reps=q_reps, p_reps=pos_reps, loss=loss, scores=torch.stack([scores_pos, scores_neg], dim=1))
 
             else:  # listwise
-                # print(score.shape)
-                # print(score)
                 p_hidden, p_reps = self.encode_passage(passage)  # (batch_size * n_passages, hidden_size)
                 batch_size = q_reps.shape[0]
                 p_reps = p_reps.view(batch_size, -1, p_reps.shape[-1])  # (batch_size, n_passages, hidden_size)
                 q_reps_expanded = q_reps.unsqueeze(1).expand(-1, p_reps.shape[1], -1)  # (batch_size, n_passages, hidden_size)
                 scores_pred = torch.sum(q_reps_expanded * p_reps, dim=2)  # (batch_size, n_passages)
-                # print(scores_pred)
                 scores_pred = F.log_softmax(scores_pred, dim=1)
-                # print(scores_pred)
-                # print(score)
                 score = F.softmax(score, dim=1)
-                # print(score)
-                # exit(0)
                 loss = self.loss_fn(scores_pred, score)
                 return DROutput(q_reps=q_reps, p_reps=p_reps, loss=loss, scores=scores_pred)
 
@@ -172,7 +164,7 @@ class DRModel(nn.Module):
                 p_reps=p_reps
             )
 
-    def encode(self, items, model, head):
+    def encode(self, items, model, head, is_q=False):
         if items is None:
             return None, None
         items = BatchEncoding(items)
@@ -181,6 +173,8 @@ class DRModel(nn.Module):
             items_out = model(**items, decoder_input_ids=decoder_input_ids, return_dict=True)
             hidden = items_out.last_hidden_state
             reps = hidden[:, 0, :]
+        elif "CLIP" in type(model).__name__:
+            reps = hidden = items_out = model.get_text_features(**items, return_dict=True) if is_q else model.get_image_features(**items, return_dict=True)
         else:
             items_out = model(**items, return_dict=True)
             hidden = getattr(items_out, self.feature)

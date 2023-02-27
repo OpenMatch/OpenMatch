@@ -9,7 +9,7 @@ from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
 from openmatch.utils import get_delta_model_class
-from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, AutoProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,13 @@ def main():
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
     )
+    try:
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name_or_path,
+            cache_dir=model_args.cache_dir,
+        )
+    except ValueError:
+        processor = None
 
     model = DRModelForInference.build(
         model_args=model_args,
@@ -69,6 +76,7 @@ def main():
 
     corpus_dataset = InferenceDataset.load(
         tokenizer=tokenizer,
+        processor=processor,
         data_args=data_args,
         is_query=False,
         stream=True,
