@@ -79,6 +79,7 @@ def main():
     if model_args.param_efficient_method:
         model_class = get_delta_model_class(model_args.param_efficient_method)
         delta_model = model_class(model)
+        delta_model.freeze_module(set_state_dict=True)
         logger.info("Using param efficient method: %s", model_args.param_efficient_method)
 
     train_dataset_cls = MappingDRTrainDataset if training_args.use_mapping_dataset else StreamDRTrainDataset
