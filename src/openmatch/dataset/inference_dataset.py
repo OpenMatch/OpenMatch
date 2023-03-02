@@ -49,6 +49,7 @@ class InferenceDataset():
         self.tokenizer = tokenizer
         self.processor = processor
         self.max_len = data_args.q_max_len if self.is_query else data_args.p_max_len
+        self.is_image = False
 
         self.template = data_args.query_template if self.is_query else data_args.doc_template
         
