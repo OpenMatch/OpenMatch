@@ -22,6 +22,7 @@ from ..arguments import DRTrainingArguments as TrainingArguments
 from ..arguments import ModelArguments
 from ..utils import mean_pooling
 from .linear import LinearHead
+from .layernorm import LayerNorm
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,8 @@ class DRModel(nn.Module):
             head_q: nn.Module = None,
             head_p: nn.Module = None,
             normalize: bool = False,
+            layernorm_q: nn.Module = None,
+            layernorm_p: nn.Module = None,
             model_args: ModelArguments = None,
             data_args: DataArguments = None,
             train_args: TrainingArguments = None,
@@ -60,6 +63,8 @@ class DRModel(nn.Module):
         self.feature = feature
         self.pooling = pooling
         self.normalize = normalize
+        self.layernorm_q = layernorm_q
+        self.layernorm_p = layernorm_p
 
         self.model_args = model_args
         self.train_args = train_args
@@ -79,15 +84,24 @@ class DRModel(nn.Module):
                 self.world_size = dist.get_world_size()
             
     def _get_config_dict(self):
-        config = {
-            "tied": self.tied,
-            "plm_backbone": {
+        if self.tied:
+            plm_backbone = {
                 "type": type(self.lm_q).__name__,
                 "feature": self.feature,
-            },
+            }
+        else:
+            plm_backbone = {
+                "lm_q_type": type(self.lm_q).__name__,
+                "lm_p_type": type(self.lm_p).__name__,
+                "feature": self.feature,
+            }
+        config = {
+            "tied": self.tied,
+            "plm_backbone": plm_backbone,
             "pooling": self.pooling,
             "linear_head": bool(self.head_q),
             "normalize": self.normalize,
+            "layernorm": bool(self.layernorm_q),
         }
         return config
 
@@ -164,10 +178,13 @@ class DRModel(nn.Module):
                 p_reps=p_reps
             )
 
-    def encode(self, items, model, head, is_q=False):
+    def encode(self, items, is_q=False):
         if items is None:
             return None, None
         items = BatchEncoding(items)
+        model = self.lm_q if is_q else self.lm_p
+        head = self.head_q if is_q else self.head_p
+        layernorm = self.layernorm_q if is_q else self.layernorm_p
         if "T5" in type(model).__name__ and not self.model_args.encoder_only:
             decoder_input_ids = torch.zeros((items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
             items_out = model(**items, decoder_input_ids=decoder_input_ids, return_dict=True)
@@ -190,13 +207,15 @@ class DRModel(nn.Module):
             reps = head(reps)  # D * d
         if self.normalize:
             reps = F.normalize(reps, dim=1)
+        if layernorm is not None:
+            reps = layernorm(reps)
         return hidden, reps
 
     def encode_passage(self, psg):
-        return self.encode(psg, self.lm_p, self.head_p)
+        return self.encode(psg, is_q=False)
 
     def encode_query(self, qry):
-        return self.encode(qry, self.lm_q, self.head_q)
+        return self.encode(qry, is_q=True)
 
     @classmethod
     def build(
@@ -211,6 +230,7 @@ class DRModel(nn.Module):
         # load local
         config = None
         head_q = head_p = None
+        layernorm_q = layernorm_p = None
         if os.path.exists(os.path.join(model_name_or_path, "openmatch_config.json")):
             with open(os.path.join(model_name_or_path, "openmatch_config.json")) as f:
                 config = json.load(f)
@@ -227,11 +247,15 @@ class DRModel(nn.Module):
                 )
                 if config["linear_head"]:
                     head_q = head_p = LinearHead.load(model_name_or_path)
+                if config["layernorm"]:
+                    layernorm_q = layernorm_p = LayerNorm.load(model_name_or_path)
             else:
                 _qry_model_path = os.path.join(model_name_or_path, 'query_model')
                 _psg_model_path = os.path.join(model_name_or_path, 'passage_model')
                 _qry_head_path = os.path.join(model_name_or_path, 'query_head')
                 _psg_head_path = os.path.join(model_name_or_path, 'passage_head')
+                _qry_layernorm_path = os.path.join(model_name_or_path, 'query_layernorm')
+                _psg_layernorm_path = os.path.join(model_name_or_path, 'passage_layernorm')
 
                 logger.info(f'loading query model weight from {_qry_model_path}')
                 model_name = config["plm_backbone"]["lm_q_type"]
@@ -260,6 +284,9 @@ class DRModel(nn.Module):
                 if config["linear_head"]:
                     head_q = LinearHead.load(_qry_head_path)
                     head_p = LinearHead.load(_psg_head_path)
+                if config["layernorm"]:
+                    layernorm_q = LayerNorm.load(_qry_layernorm_path)
+                    layernorm_p = LayerNorm.load(_psg_layernorm_path)
         else:  # a Huggingface model
             tied = not model_args.untie_encoder
             model_class = T5EncoderModel if model_args.encoder_only else AutoModel
@@ -278,6 +305,8 @@ class DRModel(nn.Module):
             head_q=head_q,
             head_p=head_p,
             normalize=model_args.normalize if config is None else config["normalize"],
+            layernorm_q=layernorm_q,
+            layernorm_p=layernorm_p,
             model_args=model_args,
             data_args=data_args,
             train_args=train_args,
@@ -293,10 +322,15 @@ class DRModel(nn.Module):
             if self.head_q is not None:
                 self.head_q.save(os.path.join(output_dir, 'query_head'))
                 self.head_p.save(os.path.join(output_dir, 'passage_head'))
+            if self.layernorm_q is not None:
+                self.layernorm_q.save(os.path.join(output_dir, 'query_layernorm'))
+                self.layernorm_p.save(os.path.join(output_dir, 'passage_layernorm'))
         else:
             self.lm_q.save_pretrained(output_dir)
             if self.head_q is not None:
                 self.head_q.save(output_dir)
+            if self.layernorm_q is not None:
+                self.layernorm_q.save(output_dir)
 
         with open(os.path.join(output_dir, 'openmatch_config.json'), 'w') as f:
             json.dump(self._get_config_dict(), f, indent=4)

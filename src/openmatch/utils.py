@@ -5,6 +5,7 @@ import json
 import warnings
 from dataclasses import dataclass
 from typing import Dict, List
+from functools import lru_cache
 
 import datasets
 import torch
@@ -205,6 +206,7 @@ def load_beir_positives(qrels_file, threshold=1):
     return qrels
 
 
+@lru_cache(maxsize=None)
 def find_all_markers(template: str):
     """
     Find all markers' names (quoted in "<>") in a template.
@@ -218,7 +220,9 @@ def find_all_markers(template: str):
         end = template.find(">", start)
         if end == -1:
             break
-        markers.append(template[start + 1:end])
+        name = template[start + 1:end]
+        if name != "/s":  # excluding </s> for roberta
+            markers.append(name)
         start = end + 1
     return markers
 

@@ -14,10 +14,11 @@ class LinearHead(nn.Module):
             self,
             input_dim: int = 768,
             output_dim: int = 768,
+            bias: bool = True,
     ):
         super(LinearHead, self).__init__()
-        self.linear = nn.Linear(input_dim, output_dim, bias=False)
-        self.config = {'input_dim': input_dim, 'output_dim': output_dim}
+        self.linear = nn.Linear(input_dim, output_dim, bias=bias)
+        self.config = {'input_dim': input_dim, 'output_dim': output_dim, 'bias': bias}
 
     def forward(self, rep: Tensor = None):
         return self.linear(rep)
