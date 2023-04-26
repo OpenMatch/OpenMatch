@@ -1,7 +1,18 @@
 # DPR (BERT-base, MS MARCO)
 
+## Download
 
-This model is DPR trained on MS MARCO [[HF Download Link]](https://huggingface.co/OpenMatch/dpr_bert-base_msmarco_qry-psg-encoder). The training details and evaluation results are as follows:
+On Hugging Face: [OpenMatch/dpr_bert-base_msmarco_qry-psg-encoder](https://huggingface.co/OpenMatch/dpr_bert-base_msmarco_qry-psg-encoder)
+
+## Information
+
+This model is DPR trained on MS MARCO. The training details and evaluation results are as follows:
+
+Dataset used for training:
+* MS MARCO Passage
+
+Evaluation result:
+
 
 |Model|Pretrain Model|Train w/ Marco Title|Marco Dev MRR@10|BEIR Avg NDCG@10|
 |:----|:----|:----|:----|:----|
