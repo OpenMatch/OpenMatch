@@ -170,9 +170,13 @@ class DRModel(nn.Module):
         items = BatchEncoding(items)
         if "T5" in type(model).__name__ and not self.model_args.encoder_only:
             decoder_input_ids = torch.zeros((items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
-            items_out = model(**items, decoder_input_ids=decoder_input_ids, return_dict=True)
-            hidden = items_out.last_hidden_state
-            reps = hidden[:, 0, :]
+            items_out = model(**items, decoder_input_ids=decoder_input_ids, output_hidden_states=True, return_dict=True)
+            if hasattr(items_out,'last_hidden_state'):
+                hidden = items_out.last_hidden_state
+                reps = hidden[:, 0, :]
+            else:
+                hidden = items_out.decoder_hidden_states[-1]
+                reps = hidden[:, 0, :]
         elif "CLIP" in type(model).__name__:
             reps = hidden = items_out = model.get_text_features(**items, return_dict=True) if is_q else model.get_image_features(**items, return_dict=True)
         else:
