@@ -60,7 +60,7 @@ def main():
             model_args.processor_name if model_args.processor_name else model_args.model_name_or_path,
             cache_dir=model_args.cache_dir,
         )
-    except ValueError:
+    except (ValueError, OSError):
         processor = None
 
     model = DRModelForInference.build(
