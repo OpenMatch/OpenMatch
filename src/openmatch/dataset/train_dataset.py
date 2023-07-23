@@ -45,7 +45,7 @@ class TrainDatasetBase:
     def _prepare_data(self, data_args, shuffle_seed, cache_dir):
         if not self.is_eval:
             self.data_files = [data_args.train_path] if data_args.train_dir is None else glob.glob(
-                    os.path.join(data_args.train_dir, "*.jsonl"))
+                os.path.join(data_args.train_dir, "*.jsonl"))
         else:
             self.data_files = [data_args.eval_path]
 
@@ -130,7 +130,8 @@ class DRTrainDataset(TrainDatasetBase):
             if self.data_args.positive_passage_no_shuffle or hashed_seed is None:
                 pos_psg = group_positives[0]
             else:
-                pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
+                pos_psg = group_positives[(
+                    hashed_seed + epoch) % len(group_positives)]
             encoded_passages.append(self.create_one_example(pos_psg))
 
             negative_size = self.data_args.train_n_passages - 1
@@ -158,7 +159,8 @@ class DRTrainDataset(TrainDatasetBase):
 
             assert len(encoded_passages) == self.data_args.train_n_passages
 
-            return {"query_": encoded_query, "passages": encoded_passages}  # Avoid name conflict with query in the original dataset
+            # Avoid name conflict with query in the original dataset
+            return {"query_": encoded_query, "passages": encoded_passages}
 
         return process_fn
 
@@ -182,7 +184,8 @@ class DRPretrainDataset(TrainDatasetBase):
         shuffle_seed: int = None,
         cache_dir: str = None
     ) -> None:
-        super(DRPretrainDataset, self).__init__(tokenizer, data_args, trainer, is_eval, shuffle_seed, cache_dir)
+        super(DRPretrainDataset, self).__init__(
+            tokenizer, data_args, trainer, is_eval, shuffle_seed, cache_dir)
         pretrain_strategies_str = data_args.pretrain_strategies.split(
             ",") if data_args.pretrain_strategies is not None else []
         strategies = []
@@ -310,7 +313,8 @@ class QGTrainDataset(TrainDatasetBase):
             if self.data_args.positive_passage_no_shuffle or hashed_seed is None:
                 pos_psg = group_positives[0]
             else:
-                pos_psg = group_positives[(hashed_seed + epoch) % len(group_positives)]
+                pos_psg = group_positives[(
+                    hashed_seed + epoch) % len(group_positives)]
 
             encoded_query = self.create_one_example(qry, is_query=True).input_ids
             encoded_query[encoded_query == self.tokenizer.pad_token_id] == -100
@@ -326,6 +330,69 @@ class StreamQGTrainDataset(StreamTrainDatasetMixin, QGTrainDataset):
 
 
 class MappingQGTrainDataset(MappingTrainDatasetMixin, QGTrainDataset):
+    pass
+
+
+class CQGTrainDataset(TrainDatasetBase):
+
+    def create_one_example(
+            self,
+            qry_encoding: List[int] = None,
+            psg_encoding_pos: List[int] = None,
+            psg_encoding_neg: List[int] = None
+        ) -> BatchEncoding:
+        if qry_encoding is not None:
+            return self.tokenizer.encode_plus(
+                qry_encoding,
+                truncation='only_first',
+                max_length=self.data_args.q_max_len,
+                padding="max_length",
+                return_attention_mask=True,
+                return_token_type_ids=False,
+                return_tensors="pt",
+            )
+        return self.tokenizer.encode_plus(
+            psg_encoding_pos + psg_encoding_neg,
+            truncation='only_first',
+            max_length=self.data_args.p_max_len * 2,
+            padding="max_length",
+            return_attention_mask=True,
+            return_token_type_ids=False,
+            return_tensors="pt",
+        )
+    
+    def get_process_fn(self, epoch, hashed_seed):
+
+        def process_fn(example):
+            qry = example['query']
+            group_positives = example['positives']
+            group_negatives = example['negatives']
+            if self.data_args.positive_passage_no_shuffle or hashed_seed is None:
+                pos_psg = group_positives[0]
+            else:
+                pos_psg = group_positives[(
+                    hashed_seed + epoch) % len(group_positives)]
+
+            if hashed_seed is None:
+                neg_psg = group_negatives[0]
+            else:
+                neg_psg = group_negatives[(
+                    hashed_seed + epoch) % len(group_negatives)]
+
+            encoded_query = self.create_one_example(qry_encoding=qry).input_ids
+            encoded_query[encoded_query == self.tokenizer.pad_token_id] == -100
+            encoded_psg_pair = self.create_one_example(psg_encoding_pos=pos_psg, psg_encoding_neg=neg_psg)
+            psg_input_ids, psg_attention_mask = encoded_psg_pair.input_ids, encoded_psg_pair.attention_mask
+            return {"input_ids": psg_input_ids[0], "attention_mask": psg_attention_mask[0], "labels": encoded_query[0]}
+
+        return process_fn
+    
+
+class StreamCQGTrainDataset(StreamTrainDatasetMixin, CQGTrainDataset):
+    pass
+
+
+class MappingCQGTrainDataset(MappingTrainDatasetMixin, CQGTrainDataset):
     pass
 
 
@@ -387,13 +454,15 @@ class ListwiseDistillationTrainDataset(TrainDatasetBase):
 
             if len(passages) < self.data_args.train_n_passages:
                 if hashed_seed is not None:
-                    psgs = random.choices(passages_and_scores, k=self.data_args.train_n_passages)
+                    psgs = random.choices(
+                        passages_and_scores, k=self.data_args.train_n_passages)
                 else:
                     psgs = [x for x in passages_and_scores]
                     psgs = psgs * 2
                     psgs = psgs[:self.data_args.train_n_passages]
             else:
-                _offset = epoch * self.data_args.train_n_passages % len(passages)
+                _offset = epoch * \
+                    self.data_args.train_n_passages % len(passages)
                 psgs = [x for x in passages_and_scores]
                 if hashed_seed is not None:
                     random.Random(hashed_seed).shuffle(psgs)
@@ -406,7 +475,7 @@ class ListwiseDistillationTrainDataset(TrainDatasetBase):
             assert len(encoded_passages) == self.data_args.train_n_passages
 
             return {
-                "query_": encoded_query, 
+                "query_": encoded_query,
                 "passages": encoded_passages,
                 "scores_": [x[1] for x in psgs]
             }  # Avoid name conflict with query in the original dataset
