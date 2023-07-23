@@ -214,6 +214,8 @@ class QGTrainingArguments(Seq2SeqTrainingArguments):
     warmup_ratio: float = field(default=0.1)
     use_mapping_dataset: bool = field(default=False, metadata={
                                       "help": "Use mapping dataset instead of iterable dataset in training"})
+    contrastive: bool = field(default=False, metadata={
+                                "help": "Train a contrastive query generation model"})
 
 
 @dataclass

@@ -166,3 +166,12 @@ class RRInferenceCollator(DefaultDataCollator):
         doc_ids = [x["doc_id"] for x in features]
         collated_features = super().__call__(features)
         return query_ids, doc_ids, collated_features
+
+@dataclass
+class CQGInferenceCollator(DefaultDataCollator):
+    def __call__(self, features):
+        query_ids = [x["query_id"] for x in features]
+        pos_doc_ids = [x["pos_doc_id"] for x in features]
+        neg_doc_ids = [x["neg_doc_id"] for x in features]
+        collated_features = super().__call__(features)
+        return query_ids, pos_doc_ids, neg_doc_ids, collated_features
