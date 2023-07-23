@@ -10,7 +10,7 @@ from transformers import (AutoConfig, AutoTokenizer, DefaultDataCollator,
 
 from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import QGTrainingArguments as TrainingArguments
-from openmatch.dataset import MappingQGTrainDataset, StreamQGTrainDataset
+from openmatch.dataset import MappingQGTrainDataset, StreamQGTrainDataset, MappingCQGTrainDataset, StreamCQGTrainDataset
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,10 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    train_dataset_cls = MappingQGTrainDataset if training_args.use_mapping_dataset else StreamQGTrainDataset
+    if training_args.contrastive:
+        train_dataset_cls = MappingCQGTrainDataset if training_args.use_mapping_dataset else StreamCQGTrainDataset
+    else:
+        train_dataset_cls = MappingQGTrainDataset if training_args.use_mapping_dataset else StreamQGTrainDataset
     train_dataset = train_dataset_cls(
         tokenizer, 
         data_args, 

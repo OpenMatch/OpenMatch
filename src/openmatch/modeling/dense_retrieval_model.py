@@ -65,19 +65,19 @@ class DRModel(nn.Module):
         self.train_args = train_args
         self.data_args = data_args
 
-
-        if train_args is not None: 
+        if train_args is not None:
             if train_args.distillation:
                 self.loss_fn = nn.MSELoss() if train_args.distil_mode == "pairwise" else nn.KLDivLoss()
             else:
                 self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-            
+
             if train_args.negatives_x_device:
                 if not dist.is_initialized():
-                    raise ValueError('Distributed training has not been initialized for representation all gather.')
+                    raise ValueError(
+                        'Distributed training has not been initialized for representation all gather.')
                 self.process_rank = dist.get_rank()
                 self.world_size = dist.get_world_size()
-            
+
     def _get_config_dict(self):
         config = {
             "tied": self.tied,
@@ -100,7 +100,8 @@ class DRModel(nn.Module):
             score: Tensor = None,
     ):
 
-        q_hidden, q_reps = self.encode_query(query)  # (batch_size, hidden_size)
+        q_hidden, q_reps = self.encode_query(
+            query)  # (batch_size, hidden_size)
 
         if self.train_args.distillation:
 
@@ -115,11 +116,16 @@ class DRModel(nn.Module):
                 return DROutput(q_reps=q_reps, p_reps=pos_reps, loss=loss, scores=torch.stack([scores_pos, scores_neg], dim=1))
 
             else:  # listwise
-                p_hidden, p_reps = self.encode_passage(passage)  # (batch_size * n_passages, hidden_size)
+                # (batch_size * n_passages, hidden_size)
+                p_hidden, p_reps = self.encode_passage(passage)
                 batch_size = q_reps.shape[0]
-                p_reps = p_reps.view(batch_size, -1, p_reps.shape[-1])  # (batch_size, n_passages, hidden_size)
-                q_reps_expanded = q_reps.unsqueeze(1).expand(-1, p_reps.shape[1], -1)  # (batch_size, n_passages, hidden_size)
-                scores_pred = torch.sum(q_reps_expanded * p_reps, dim=2)  # (batch_size, n_passages)
+                # (batch_size, n_passages, hidden_size)
+                p_reps = p_reps.view(batch_size, -1, p_reps.shape[-1])
+                # (batch_size, n_passages, hidden_size)
+                q_reps_expanded = q_reps.unsqueeze(
+                    1).expand(-1, p_reps.shape[1], -1)
+                # (batch_size, n_passages)
+                scores_pred = torch.sum(q_reps_expanded * p_reps, dim=2)
                 scores_pred = F.log_softmax(scores_pred, dim=1)
                 score = F.softmax(score, dim=1)
                 loss = self.loss_fn(scores_pred, score)
@@ -152,7 +158,7 @@ class DRModel(nn.Module):
                 dtype=torch.long
             )
             target = target * self.data_args.train_n_passages
-            
+
             loss = self.loss_fn(scores, target)
 
             if self.training and self.train_args.negatives_x_device:
@@ -168,9 +174,12 @@ class DRModel(nn.Module):
         if items is None:
             return None, None
         items = BatchEncoding(items)
-        if "T5" in type(model).__name__ and not self.model_args.encoder_only:
-            decoder_input_ids = torch.zeros((items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
-            items_out = model(**items, decoder_input_ids=decoder_input_ids, output_hidden_states=True, return_dict=True)
+        # Use decoder, if not configured to use encoder only AND if model is not an encoder-only model
+        if ("T5" in type(model).__name__) and (not self.model_args.encoder_only) and (type(model).__name__ != "T5EncoderModel"):
+            decoder_input_ids = torch.zeros(
+                (items.input_ids.shape[0], 1), dtype=torch.long).to(items.input_ids.device)
+            items_out = model(
+                **items, decoder_input_ids=decoder_input_ids, return_dict=True)
             if hasattr(items_out,'last_hidden_state'):
                 hidden = items_out.last_hidden_state
                 reps = hidden[:, 0, :]
@@ -178,7 +187,8 @@ class DRModel(nn.Module):
                 hidden = items_out.decoder_hidden_states[-1]
                 reps = hidden[:, 0, :]
         elif "CLIP" in type(model).__name__:
-            reps = hidden = items_out = model.get_text_features(**items, return_dict=True) if is_q else model.get_image_features(**items, return_dict=True)
+            reps = hidden = items_out = model.get_text_features(
+                **items, return_dict=True) if is_q else model.get_image_features(**items, return_dict=True)
         else:
             items_out = model(**items, return_dict=True)
             hidden = getattr(items_out, self.feature)
@@ -189,7 +199,8 @@ class DRModel(nn.Module):
             elif self.pooling == "no":
                 reps = hidden
             else:
-                raise ValueError("Unknown pooling type: {}".format(self.pooling))
+                raise ValueError(
+                    "Unknown pooling type: {}".format(self.pooling))
         if head is not None:
             reps = head(reps)  # D * d
         if self.normalize:
@@ -224,7 +235,8 @@ class DRModel(nn.Module):
             if tied:
                 logger.info(f'loading model weight from {model_name_or_path}')
                 model_name = config["plm_backbone"]["type"]
-                model_class = getattr(importlib.import_module("transformers"), model_name)
+                model_class = getattr(
+                    importlib.import_module("transformers"), model_name)
                 lm_q = lm_p = model_class.from_pretrained(
                     model_name_or_path,
                     **hf_kwargs
@@ -232,29 +244,40 @@ class DRModel(nn.Module):
                 if config["linear_head"]:
                     head_q = head_p = LinearHead.load(model_name_or_path)
             else:
-                _qry_model_path = os.path.join(model_name_or_path, 'query_model')
-                _psg_model_path = os.path.join(model_name_or_path, 'passage_model')
+                _qry_model_path = os.path.join(
+                    model_name_or_path, 'query_model')
+                _psg_model_path = os.path.join(
+                    model_name_or_path, 'passage_model')
                 _qry_head_path = os.path.join(model_name_or_path, 'query_head')
-                _psg_head_path = os.path.join(model_name_or_path, 'passage_head')
+                _psg_head_path = os.path.join(
+                    model_name_or_path, 'passage_head')
 
-                logger.info(f'loading query model weight from {_qry_model_path}')
+                logger.info(
+                    f'loading query model weight from {_qry_model_path}')
                 model_name = config["plm_backbone"]["lm_q_type"]
-                model_class = getattr(importlib.import_module("transformers"), model_name)
+                model_class = getattr(
+                    importlib.import_module("transformers"), model_name)
                 if os.path.exists(os.path.join(_qry_model_path, "config.json")):
-                    logger.info(f'loading query model config from {_qry_model_path}')
-                    qry_model_config = AutoConfig.from_pretrained(_qry_model_path)
+                    logger.info(
+                        f'loading query model config from {_qry_model_path}')
+                    qry_model_config = AutoConfig.from_pretrained(
+                        _qry_model_path)
                     hf_kwargs["config"] = qry_model_config
                 lm_q = model_class.from_pretrained(
                     _qry_model_path,
                     **hf_kwargs
                 )
 
-                logger.info(f'loading passage model weight from {_psg_model_path}')
+                logger.info(
+                    f'loading passage model weight from {_psg_model_path}')
                 model_name = config["plm_backbone"]["lm_p_type"]
-                model_class = getattr(importlib.import_module("transformers"), model_name)
+                model_class = getattr(
+                    importlib.import_module("transformers"), model_name)
                 if os.path.exists(os.path.join(_psg_model_path, "config.json")):
-                    logger.info(f'loading passage model config from {_psg_model_path}')
-                    psg_model_config = AutoConfig.from_pretrained(_psg_model_path)
+                    logger.info(
+                        f'loading passage model config from {_psg_model_path}')
+                    psg_model_config = AutoConfig.from_pretrained(
+                        _psg_model_path)
                     hf_kwargs["config"] = psg_model_config
                 lm_p = model_class.from_pretrained(
                     _psg_model_path,
@@ -270,7 +293,8 @@ class DRModel(nn.Module):
             lm_q = model_class.from_pretrained(model_name_or_path, **hf_kwargs)
             lm_p = copy.deepcopy(lm_q) if not tied else lm_q
             if model_args.add_linear_head:
-                head_q = LinearHead(model_args.projection_in_dim, model_args.projection_out_dim)
+                head_q = LinearHead(
+                    model_args.projection_in_dim, model_args.projection_out_dim)
                 head_p = copy.deepcopy(head_q) if not tied else head_q
 
         model = cls(
@@ -293,7 +317,8 @@ class DRModel(nn.Module):
             os.makedirs(os.path.join(output_dir, 'query_model'))
             os.makedirs(os.path.join(output_dir, 'passage_model'))
             self.lm_q.save_pretrained(os.path.join(output_dir, 'query_model'))
-            self.lm_p.save_pretrained(os.path.join(output_dir, 'passage_model'))
+            self.lm_p.save_pretrained(
+                os.path.join(output_dir, 'passage_model'))
             if self.head_q is not None:
                 self.head_q.save(os.path.join(output_dir, 'query_head'))
                 self.head_p.save(os.path.join(output_dir, 'passage_head'))

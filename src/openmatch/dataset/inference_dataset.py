@@ -30,8 +30,11 @@ class InferenceDataset():
 
     def __init__(
         self, 
-        data_args: DataArguments, 
         data_files: Union[str, List[str]],
+        max_len: int = 128,
+        template: str = None,
+        column_names: str = None,
+        all_markers: str = None,
         tokenizer: PreTrainedTokenizer = None, 
         processor: ProcessorMixin = None,
         is_query: bool = False, 
@@ -48,10 +51,11 @@ class InferenceDataset():
         self.data_files = data_files
         self.tokenizer = tokenizer
         self.processor = processor
-        self.max_len = data_args.q_max_len if self.is_query else data_args.p_max_len
+        self.max_len = max_len
         self.is_image = False
 
-        self.template = data_args.query_template if self.is_query else data_args.doc_template
+        self.template = template
+        self.column_names = column_names
         
         self.full_tokenization = full_tokenization
         modes = ["raw", "dict_processed", "processed"]
@@ -65,12 +69,15 @@ class InferenceDataset():
 
         self.filter_fn = filter_fn
 
-        self._prepare_data(data_args)
+        self._prepare_data()
 
         if not self.is_image:
-            self.all_markers = find_all_markers(self.template) if data_args.all_markers is None else data_args.all_markers.split(",")
+            if self.template is None:
+                self.all_markers = None
+            else:
+                self.all_markers = find_all_markers(self.template) if all_markers is None else all_markers.split(",")
 
-    def _prepare_data(self, data_args):
+    def _prepare_data(self):
         raise NotImplementedError
 
     @classmethod
@@ -78,6 +85,10 @@ class InferenceDataset():
         cls, 
         data_args: DataArguments, 
         data_files: Union[str, List[str]] = None,
+        max_len: int = 128,
+        template: str = None,
+        column_names: str = None,
+        all_markers: str = None,
         tokenizer: PreTrainedTokenizer = None, 
         processor: ProcessorMixin = None,
         is_query: bool = False, 
@@ -90,10 +101,14 @@ class InferenceDataset():
         filter_fn: Callable = lambda x: True,
         cache_dir: str = None
     ):
-        if data_files is None:
-            data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
-        else:
+        if data_files is not None:
             data_files = [data_files] if isinstance(data_files, str) else data_files
+        else:
+            data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
+        max_len = max_len if max_len is not None else data_args.q_max_len if is_query else data_args.p_max_len
+        template = template if template is not None else data_args.query_template if is_query else data_args.doc_template
+        column_names = column_names if column_names is not None else data_args.query_column_names if is_query else data_args.doc_column_names
+        all_markers = all_markers if all_markers is not None else data_args.all_markers
         ext = os.path.splitext(data_files[0])[1]
         ext_to_cls = {
             ".jsonl": StreamJsonlDataset if stream else MappingJsonlDataset,
@@ -106,8 +121,11 @@ class InferenceDataset():
         return cls_(
             tokenizer=tokenizer, 
             processor=processor,
-            data_args=data_args, 
             data_files=data_files,
+            max_len=max_len,
+            template=template,
+            all_markers=all_markers,
+            column_names=column_names,
             is_query=is_query, 
             full_tokenization=full_tokenization, 
             mode=mode,
@@ -187,7 +205,7 @@ class MappingInferenceDataset(Dataset):
 
 class StreamJsonlDataset(StreamInferenceDataset, InferenceDataset):
 
-    def _prepare_data(self, data_args):
+    def _prepare_data(self):
         self.dataset = load_dataset(
             "json", 
             data_files=self.data_files, 
@@ -200,7 +218,7 @@ class StreamJsonlDataset(StreamInferenceDataset, InferenceDataset):
 
 class MappingJsonlDataset(MappingInferenceDataset, InferenceDataset):
     
-    def _prepare_data(self, data_args):
+    def _prepare_data(self):
         hf_dataset = load_dataset(
             "json", 
             data_files=self.data_files, 
@@ -216,8 +234,8 @@ class MappingJsonlDataset(MappingInferenceDataset, InferenceDataset):
 
 class StreamTsvDataset(StreamInferenceDataset, InferenceDataset):
 
-    def _prepare_data(self, data_args):
-        self.all_columns = data_args.query_column_names if self.is_query else data_args.doc_column_names
+    def _prepare_data(self):
+        self.all_columns = self.column_names
         if self.all_columns is not None:
             self.all_columns = self.all_columns.split(',')
         self.dataset = load_dataset(
@@ -232,8 +250,8 @@ class StreamTsvDataset(StreamInferenceDataset, InferenceDataset):
 
 class MappingTsvDataset(MappingInferenceDataset, InferenceDataset):
     
-    def _prepare_data(self, data_args):
-        self.all_columns = data_args.query_column_names if self.is_query else data_args.doc_column_names
+    def _prepare_data(self):
+        self.all_columns = self.column_names
         if self.all_columns is not None:
             self.all_columns = self.all_columns.split(',')
         hf_dataset = load_dataset(
@@ -251,7 +269,7 @@ class MappingTsvDataset(MappingInferenceDataset, InferenceDataset):
 
 class StreamImageDataset(StreamInferenceDataset, InferenceDataset):
 
-    def _prepare_data(self, data_args):
+    def _prepare_data(self):
         self.is_image = True
         self.dataset = load_dataset(
             self.data_files[0],
