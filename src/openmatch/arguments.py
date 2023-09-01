@@ -249,6 +249,11 @@ class InferenceArguments(TrainingArguments):
         metadata={"help": "whether to split the entire corpus search into multiple sub-search jobs."}
     )
 
+    faiss_starting_gpu: int = field(
+        default=0,
+        metadata={"help": "starting gpu for faiss"}
+    )
+
 
 @dataclass
 class QGInferenceArguments(Seq2SeqTrainingArguments):

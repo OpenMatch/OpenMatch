@@ -2,10 +2,10 @@
 
 import os
 from functools import lru_cache
-from typing import Callable, List, Union
+from typing import Callable, List, Union, Dict
 
 import datasets
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from PIL import Image
 from torch.utils.data import Dataset, IterableDataset
 from transformers import AutoProcessor, PreTrainedTokenizer, ProcessorMixin
@@ -33,6 +33,7 @@ class InferenceDataset():
     def __init__(
         self, 
         data_files: Union[str, List[str]],
+        data: List[Dict] = None,
         max_len: int = 128,
         template: str = None,
         column_names: str = None,
@@ -51,6 +52,7 @@ class InferenceDataset():
         self.cache_dir = cache_dir
         self.is_query = is_query
         self.data_files = data_files
+        self.data = data
         self.tokenizer = tokenizer
         self.processor = processor
         self.max_len = max_len
@@ -85,7 +87,8 @@ class InferenceDataset():
     @classmethod
     def load(
         cls, 
-        data_args: DataArguments, 
+        data_args: DataArguments = None, 
+        data: List[Dict] = None,
         data_files: Union[str, List[str]] = None,
         max_len: int = 128,
         template: str = None,
@@ -103,14 +106,32 @@ class InferenceDataset():
         filter_fn: Callable = lambda x: True,
         cache_dir: str = None
     ):
-        if data_files is not None:
-            data_files = [data_files] if isinstance(data_files, str) else data_files
-        else:
-            data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
         max_len = max_len if max_len is not None else data_args.q_max_len if is_query else data_args.p_max_len
         template = template if template is not None else data_args.query_template if is_query else data_args.doc_template
         column_names = column_names if column_names is not None else data_args.query_column_names if is_query else data_args.doc_column_names
         all_markers = all_markers if all_markers is not None else data_args.all_markers
+        if data is not None:
+            return StreamInMemoryDataset(
+                tokenizer=tokenizer, 
+                processor=processor,
+                data_files=data_files,
+                max_len=max_len,
+                template=template,
+                all_markers=all_markers,
+                column_names=column_names,
+                is_query=is_query, 
+                full_tokenization=full_tokenization, 
+                mode=mode,
+                batch_size=batch_size,
+                num_processes=num_processes,
+                process_index=process_index,
+                filter_fn=filter_fn,
+                cache_dir=cache_dir
+            )
+        if data_files is not None:
+            data_files = [data_files] if isinstance(data_files, str) else data_files
+        else:
+            data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
         ext = os.path.splitext(data_files[0])[1]
         ext_to_cls = {
             ".jsonl": StreamJsonlDataset if stream else MappingJsonlDataset,
@@ -279,3 +300,11 @@ class StreamImageDataset(StreamInferenceDataset, InferenceDataset):
             streaming=True,
         )
         self.dataset = self.dataset.cast_column("image", datasets.Image(decode=False))
+
+
+class StreamInMemoryDataset(StreamInferenceDataset, InferenceDataset):
+
+    def _prepare_data(self):
+        self.dataset = Dataset.from_list(self.data).filter(self.filter_fn)
+        sample = self.dataset[0]
+        self.all_columns = sample.keys()

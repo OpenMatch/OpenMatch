@@ -4,7 +4,7 @@ import logging
 import os
 import pickle
 from contextlib import nullcontext
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import faiss
 import numpy as np
@@ -12,6 +12,7 @@ import torch
 from torch.cuda import amp
 from torch.utils.data import DataLoader, IterableDataset
 from tqdm import tqdm
+from transformers import PreTrainedTokenizer
 
 from ..arguments import InferenceArguments as EncodingArguments
 from ..dataset import DRInferenceCollator
@@ -30,6 +31,7 @@ class Retriever:
         self.args = args
         self.doc_lookup = []
         self.query_lookup = []
+        self.index_on_gpu = False
 
         self.model.to(self.args.device)
         self.model.eval()
@@ -51,11 +53,15 @@ class Retriever:
         co.usePrecomputed = False
         vres = faiss.GpuResourcesVector()
         vdev = faiss.Int32Vector()
-        for i in range(0, ngpu):
+        if self.args.faiss_starting_gpu >= ngpu:
+            raise ValueError(
+                f"Faiss GPU {self.args.faiss_starting_gpu} is out of range (0-{ngpu-1})")
+        for i in range(self.args.faiss_starting_gpu, ngpu):
             vdev.push_back(i)
             vres.push_back(gpu_resources[i])
         self.index = faiss.index_cpu_to_gpu_multiple(
             vres, vdev, self.index, co)
+        self.index_on_gpu = True
 
     def doc_embedding_inference(self):
         # Note: during evaluation, there's no point in wrapping the model
@@ -127,6 +133,8 @@ class Retriever:
         retriever.doc_embedding_inference()
         if args.process_index == 0:
             retriever.init_index_and_add()
+            if retriever.args.use_gpu and not retriever.index_on_gpu:
+                retriever._move_index_to_gpu()
         if args.world_size > 1:
             torch.distributed.barrier()
         return retriever
@@ -142,6 +150,8 @@ class Retriever:
         retriever = cls(model, None, args)
         if args.process_index == 0:
             retriever.init_index_and_add()
+            if retriever.args.use_gpu and not retriever.index_on_gpu:
+                retriever._move_index_to_gpu()
         if args.world_size > 1:
             torch.distributed.barrier()
         return retriever
@@ -151,6 +161,7 @@ class Retriever:
             self.index.reset()
         self.doc_lookup = []
         self.query_lookup = []
+        self.index_on_gpu = False
 
     def query_embedding_inference(self, query_dataset: IterableDataset):
         dataloader = DataLoader(
@@ -212,34 +223,72 @@ class Retriever:
                 doc_index = str(doc_index)
                 if self.args.remove_identical and qid == doc_index:
                     continue
-                return_dict[qid][doc_index] = float(score)
+                return_dict[qid][doc_index] = {"score": float(score)}
             q += 1
 
         logger.info("End searching with {} queries".format(len(return_dict)))
 
         return return_dict
 
-    def retrieve(self, query_dataset: IterableDataset, topk: int = 100):
-        self.query_embedding_inference(query_dataset)
-        self.model.cpu()
-        del self.model
-        torch.cuda.empty_cache()
-        results = {}
-        if self.args.process_index == 0:
-            if self.args.use_gpu:
-                self._move_index_to_gpu()
-            results = self.search(topk)
-        if self.args.world_size > 1:
-            torch.distributed.barrier()
-        return results
-    
+    @staticmethod
+    def fill_retrieval_result_with_document_texts(
+        retrieval_result: Union[Dict[str, Dict[str, Dict[str, float]]], Dict[str, Dict[str, float]]],
+        doc_id_to_doc,
+        single_query: bool = False
+    ):
+        if single_query:
+            for doc_id, score in retrieval_result.items():
+                retrieval_result[doc_id] = {"score": score["score"], **doc_id_to_doc[doc_id]} if isinstance(
+                    doc_id_to_doc[doc_id], Dict) else {"score": score["score"], "text": doc_id_to_doc[doc_id]}
+        else:
+            for query_id, doc_id_to_score in retrieval_result.items():
+                for doc_id, score in doc_id_to_score.items():
+                    retrieval_result[query_id][doc_id] = {
+                        "score": score["score"], **doc_id_to_doc[doc_id]} if isinstance(
+                        doc_id_to_doc[doc_id], Dict) else {"score": score["score"], "text": doc_id_to_doc[doc_id]}
+
+    def retrieve(
+        self,
+        query_dataset: IterableDataset = None,
+        query: str = None,
+        tokenizer: PreTrainedTokenizer = None,
+        doc_id_to_doc=None,
+        topk: int = 100
+    ):
+        if query_dataset is not None:
+            self.query_embedding_inference(query_dataset)
+            result = {}
+            if self.args.process_index == 0:
+                result = self.search(topk)
+                if doc_id_to_doc is not None:
+                    self.fill_retrieval_result_with_document_texts(
+                        result, doc_id_to_doc)
+            if self.args.world_size > 1:
+                torch.distributed.barrier()
+            return result
+
+        query_tokenized = tokenizer(query, return_tensors='pt')
+        for k, v in query_tokenized.items():
+            query_tokenized[k] = v.to(self.args.device)
+        model_output: DROutput = self.model(query=query_tokenized)
+        D, I = self.index.search(
+            model_output.q_reps.cpu().detach().numpy(), topk)
+        original_indices = np.array(self.doc_lookup)[I]
+        D, original_indices = D[0].tolist(), original_indices[0].tolist()
+        result = {}
+        for score, index in zip(D, original_indices):
+            result[index] = {"score": score}
+        if doc_id_to_doc is not None:
+            self.fill_retrieval_result_with_document_texts(
+                result, doc_id_to_doc, single_query=True)
+        return result
+
     def split_retrieve(self, query_dataset: IterableDataset, topk: int = 100):
         self.query_embedding_inference(query_dataset)
-        del self.model
-        torch.cuda.empty_cache()
         final_result = {}
         if self.args.process_index == 0:
-            all_partitions = glob.glob(os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
+            all_partitions = glob.glob(os.path.join(
+                self.args.output_dir, "embeddings.corpus.rank.*"))
             for partition in all_partitions:
                 logger.info("Loading partition {}".format(partition))
                 self.init_index_and_add(partition)
@@ -247,7 +296,8 @@ class Retriever:
                     self._move_index_to_gpu()
                 cur_result = self.search(topk)
                 self.reset_index()
-                final_result = merge_retrieval_results_by_score([final_result, cur_result], topk)
+                final_result = merge_retrieval_results_by_score(
+                    [final_result, cur_result], topk)
         if self.args.world_size > 1:
             torch.distributed.barrier()
         return final_result
@@ -259,14 +309,18 @@ class SuccessiveRetriever(Retriever):
         super().__init__(model, corpus_dataset, args)
 
     @classmethod
+    def build_all(cls, model: DRModelForInference, corpus_dataset: IterableDataset, args: EncodingArguments):
+        retriever = cls(model, corpus_dataset, args)
+        retriever.doc_embedding_inference()
+        return retriever
+
+    @classmethod
     def from_embeddings(cls, model: DRModelForInference, args: EncodingArguments):
         retriever = cls(model, None, args)
         return retriever
 
     def retrieve(self, query_dataset: IterableDataset, topk: int = 100):
         self.query_embedding_inference(query_dataset)
-        del self.model
-        torch.cuda.empty_cache()
         final_result = {}
         if self.args.process_index == 0:
             all_partitions = glob.glob(os.path.join(

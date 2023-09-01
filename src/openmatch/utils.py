@@ -4,7 +4,7 @@ import csv
 import json
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import datasets
 import torch
@@ -129,7 +129,7 @@ class SimpleCollectionPreProcessor:
         return json.dumps(encoded)
 
 
-def save_as_trec(rank_result: Dict[str, Dict[str, float]], output_path: str, run_id: str = "OpenMatch"):
+def save_as_trec(rank_result: Dict[str, Dict[str, Dict[str, Any]]], output_path: str, run_id: str = "OpenMatch"):
     """
     Save the rank result as TREC format:
     <query_id> Q0 <doc_id> <rank> <score> <run_id>
@@ -137,7 +137,7 @@ def save_as_trec(rank_result: Dict[str, Dict[str, float]], output_path: str, run
     with open(output_path, "w") as f:
         for qid in rank_result:
             # sort the results by score
-            sorted_results = sorted(rank_result[qid].items(), key=lambda x: x[1], reverse=True)
+            sorted_results = sorted(rank_result[qid].items(), key=lambda x: x[1]["score"], reverse=True)
             for i, (doc_id, score) in enumerate(sorted_results):
                 f.write("{} Q0 {} {} {} {}\n".format(qid, doc_id, i + 1, score, run_id))
 
