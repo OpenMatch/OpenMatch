@@ -21,6 +21,8 @@ def get_idx(obj):
     if example_id is None:
         example_id = obj.get("text_id", None)
     if example_id is None:
+        example_id = obj.get("sample_id", None)
+    if example_id is None:
         raise ValueError("No id field found in data, tried `_id`, `id`, `text_id`")
     example_id = str(example_id) if example_id is not None else None
     return example_id
