@@ -1,7 +1,7 @@
 import logging
 import os
 from contextlib import nullcontext
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import random
 
 import torch
@@ -37,7 +37,7 @@ class CQGPredictDataset(IterableDataset):
         tokenizer: PreTrainedTokenizer, 
         corpus_dataset_pos: InferenceDataset, 
         corpus_dataset_neg: InferenceDataset,
-        run: Dict[str, List[str, float]],
+        run: Dict[str, List[Tuple[str, float]]],
         qrels: Dict[str, List[str]] = None
     ):
         super(CQGPredictDataset, self).__init__()
@@ -94,7 +94,7 @@ class ContrastiveQueryGenerator:
         self.model = model.to(self.args.device)
         self.model.eval()
 
-    def generate(self, run: Dict[str, List[str, float]]):
+    def generate(self, run: Dict[str, List[Tuple[str, float]]]):
         dataset = CQGPredictDataset(self.tokenizer, self.corpus_dataset_pos, self.corpus_dataset_neg, run, self.qrels)
         dataloader = DataLoader(
             dataset,

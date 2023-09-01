@@ -15,9 +15,12 @@ if __name__ == "__main__":
 
     linear_dir = os.path.join(args.st_ckpt_path, "2_Dense")
     dense_model = sentence_transformers.models.Dense.load(linear_dir)
+    with open(os.path.join(linear_dir, "config.json"), "r") as f:
+        dense_config = json.load(f)
+    in_features, out_features = dense_config["in_features"], dense_config["out_features"]
     print("Sentence-transformers linear weight:")
     print(dense_model.state_dict())
-    new_linear = LinearHead(768, 768)
+    new_linear = LinearHead(in_features, out_features)
     new_linear.linear.weight.data = dense_model.linear.weight.data
     print("OpenMatch linear weight:")
     print(new_linear.state_dict())
