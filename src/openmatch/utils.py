@@ -5,6 +5,7 @@ import json
 import warnings
 from dataclasses import dataclass
 from typing import Dict, List, Any
+import pathlib
 
 import datasets
 import torch
@@ -134,12 +135,13 @@ def save_as_trec(rank_result: Dict[str, Dict[str, Dict[str, Any]]], output_path:
     Save the rank result as TREC format:
     <query_id> Q0 <doc_id> <rank> <score> <run_id>
     """
+    pathlib.Path("/".join(output_path.split("/")[:-1])).mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         for qid in rank_result:
             # sort the results by score
             sorted_results = sorted(rank_result[qid].items(), key=lambda x: x[1]["score"], reverse=True)
             for i, (doc_id, score) in enumerate(sorted_results):
-                f.write("{} Q0 {} {} {} {}\n".format(qid, doc_id, i + 1, score, run_id))
+                f.write("{} Q0 {} {} {} {}\n".format(qid, doc_id, i + 1, score["score"], run_id))
 
 
 def load_from_trec(input_path: str, as_list: bool = False, max_len_per_q: int = None):
