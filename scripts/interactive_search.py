@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, encoding_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -68,7 +70,7 @@ def main():
         mode="raw",
         is_query=False,
         stream=False,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     retriever = Retriever.from_embeddings(model, encoding_args)
@@ -79,11 +81,16 @@ def main():
         except EOFError:
             print("Exiting")
             break
-        result = retriever.retrieve(query=query, tokenizer=tokenizer, doc_id_to_doc=corpus_dataset, topk=10)
+        result = retriever.retrieve(
+            query=query,
+            tokenizer=tokenizer,
+            doc_id_to_doc=corpus_dataset,
+            topk=encoding_args.retrieve_depth,
+        )
         result_list = sorted(result.items(), key=lambda x: x[1]["score"], reverse=True)
         for rank, (doc_id, info) in enumerate(result_list):
             print(f"{rank + 1}\t{doc_id}\t{info}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

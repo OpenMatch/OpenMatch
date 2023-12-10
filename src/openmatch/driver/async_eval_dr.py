@@ -165,7 +165,7 @@ def main():
 
             retriever = Retriever.build_all(
                 model, corpus_dataset, encoding_args)
-            run = retriever.retrieve(query_dataset)
+            run = retriever.retrieve(query_dataset, topk=encoding_args.retrieve_depth)
 
             if encoding_args.local_process_index == 0:
                 evaluator = pytrec_eval.RelevanceEvaluator(

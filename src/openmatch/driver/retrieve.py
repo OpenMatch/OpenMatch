@@ -83,7 +83,7 @@ def main():
     )
 
     retriever = Retriever.from_embeddings(model, encoding_args)
-    result = retriever.retrieve(query_dataset, encoding_args.retrieve_depth)
+    result = retriever.retrieve(query_dataset, topk=encoding_args.retrieve_depth)
     if encoding_args.local_process_index == 0:
         if not other_args.add_ground_truth:
             save_as_trec(result, encoding_args.trec_save_path)
