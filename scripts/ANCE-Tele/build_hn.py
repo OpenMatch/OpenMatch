@@ -1,10 +1,12 @@
-from argparse import ArgumentParser
-from transformers import AutoTokenizer
 import os
 import random
-from tqdm import tqdm
+from argparse import ArgumentParser
 from datetime import datetime
 from multiprocessing import Pool
+
+from tqdm import tqdm
+from transformers import AutoTokenizer
+
 from openmatch.utils import SimpleTrainPreProcessor as TrainPreProcessor
 
 
@@ -35,22 +37,21 @@ def load_ranking(rank_file, relevance, n_sample, depth):
                 return
 
 
-
 parser = ArgumentParser()
-parser.add_argument('--tokenizer_name', required=True)
-parser.add_argument('--hn_file', required=True)
-parser.add_argument('--qrels', required=True)
-parser.add_argument('--queries', required=True)
-parser.add_argument('--collection', required=True)
-parser.add_argument('--save_to', required=True)
-parser.add_argument('--doc_template', type=str, default=None)
-parser.add_argument('--query_template', type=str, default=None)
-parser.add_argument('--seed',type=int,default=42)
-parser.add_argument('--truncate', type=int, default=128)
-parser.add_argument('--n_sample', type=int, default=30)
-parser.add_argument('--depth', type=int, default=200)
-parser.add_argument('--mp_chunk_size', type=int, default=500)
-parser.add_argument('--shard_size', type=int, default=45000)
+parser.add_argument("--tokenizer_name", required=True)
+parser.add_argument("--hn_file", required=True)
+parser.add_argument("--qrels", required=True)
+parser.add_argument("--queries", required=True)
+parser.add_argument("--collection", required=True)
+parser.add_argument("--save_to", required=True)
+parser.add_argument("--doc_template", type=str, default=None)
+parser.add_argument("--query_template", type=str, default=None)
+parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--truncate", type=int, default=128)
+parser.add_argument("--n_sample", type=int, default=30)
+parser.add_argument("--depth", type=int, default=200)
+parser.add_argument("--mp_chunk_size", type=int, default=500)
+parser.add_argument("--shard_size", type=int, default=45000)
 
 args = parser.parse_args()
 random.seed(args.seed)
@@ -63,7 +64,7 @@ processor = TrainPreProcessor(
     doc_max_len=args.truncate,
     doc_template=args.doc_template,
     query_template=args.query_template,
-    allow_not_found=True
+    allow_not_found=True,
 )
 
 counter = 0
@@ -76,9 +77,9 @@ with Pool() as p:
     for x in p.imap(processor.process_one, pbar, chunksize=args.mp_chunk_size):
         counter += 1
         if f is None:
-            f = open(os.path.join(args.save_to, f'split{shard_id:02d}.hn.jsonl'), 'w')
-            pbar.set_description(f'split - {shard_id:02d}')
-        f.write(x + '\n')
+            f = open(os.path.join(args.save_to, f"split{shard_id:02d}.hn.jsonl"), "w")
+            pbar.set_description(f"split - {shard_id:02d}")
+        f.write(x + "\n")
 
         if counter == args.shard_size:
             f.close()

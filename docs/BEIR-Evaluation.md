@@ -15,7 +15,7 @@ For 18 datasets in BEIR, 15 of them can be directly loaded via OpenMatch. Howeve
     text = re.sub(r"[^A-Za-z0-9=(),!?\'\`]", " ", data['text'])
     text = " ".join(text.split())
     ```
-    
+
 ## Evaluation
 
 Here we use the `trec-covid` dataset as an example to describe the evaluation method. If you want to test all 18 datasets at once, you can run the shell script `OpenMatch/scripts/BEIR/eval_beir.sh`

@@ -1,7 +1,7 @@
 import argparse
 import json
-from tqdm import tqdm
 
+from tqdm import tqdm
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -22,13 +22,11 @@ if __name__ == "__main__":
     validated_data = {}
     query_data = []
     for element in raw_data:
-        #if utils.validate_datapoint(element, logger=None):
+        # if utils.validate_datapoint(element, logger=None):
         if element["id"] in validated_data:
             raise ValueError("ids are not unique in input data!")
         validated_data[element["id"]] = element
-        query_data.append(
-            {"query": element["input"], "id": element["id"]}
-        )
+        query_data.append({"query": element["input"], "id": element["id"]})
 
     if len(provenance) != len(query_data):
         print("WARNING: provenance and query data are not of the same length!")

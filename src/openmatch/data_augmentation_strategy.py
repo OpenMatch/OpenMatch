@@ -3,7 +3,6 @@ from typing import List
 
 
 class DataAugmentationStrategy:
-
     def augment(self, data: List[int]) -> List[int]:
         raise NotImplementedError
 
@@ -12,13 +11,11 @@ class DataAugmentationStrategy:
 
 
 class NullStrategy(DataAugmentationStrategy):
-
     def augment(self, data: List[int]) -> List[int]:
         return data
 
 
 class Cropping(DataAugmentationStrategy):
-
     def __init__(self, ratio_min: float = 0.1, ratio_max: float = 0.5):
         self.ratio_min = ratio_min
         self.ratio_max = ratio_max
@@ -33,7 +30,6 @@ class Cropping(DataAugmentationStrategy):
 
 
 class SequentialStrategies(DataAugmentationStrategy):
-
     def __init__(self, *strategies: DataAugmentationStrategy):
         self.strategies = strategies
 

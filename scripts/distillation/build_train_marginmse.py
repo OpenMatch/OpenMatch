@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, HfArgumentParser
 
 from openmatch.arguments import DataArguments
 from openmatch.dataset import InferenceDataset
-from openmatch.utils import load_positives, load_beir_positives, load_from_trec
+from openmatch.utils import load_beir_positives, load_from_trec, load_positives
 
 parser = HfArgumentParser(DataArguments)
 parser.add_argument("--tokenizer_name", type=str, required=True)
@@ -20,20 +20,16 @@ data_args, other_args = parser.parse_args_into_dataclasses()
 
 tokenizer = AutoTokenizer.from_pretrained(other_args.tokenizer_name, use_fast=True)
 query_dataset = InferenceDataset.load(
-    tokenizer=tokenizer,
-    data_args=data_args,
-    is_query=True,
-    full_tokenization=False,
-    stream=False
+    tokenizer=tokenizer, data_args=data_args, is_query=True, full_tokenization=False, stream=False
 )
 corpus_dataset = InferenceDataset.load(
-    tokenizer=tokenizer,
-    data_args=data_args,
-    is_query=False,
-    full_tokenization=False,
-    stream=False
+    tokenizer=tokenizer, data_args=data_args, is_query=False, full_tokenization=False, stream=False
 )
-qrels = load_beir_positives(other_args.qrels_file) if other_args.beir else load_positives(other_args.qrels_file)
+qrels = (
+    load_beir_positives(other_args.qrels_file)
+    if other_args.beir
+    else load_positives(other_args.qrels_file)
+)
 run = load_from_trec(other_args.trec_file)
 
 save_dir = os.path.split(other_args.save_to)[0]

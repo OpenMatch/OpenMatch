@@ -14,7 +14,7 @@ pip install -e .
 
 We do not include all the requirements in the package. You may need to manually install `torch`, `tensorboard`.
 
-You may also need faiss for dense retrieval. You can install either `faiss-cpu` or `faiss-gpu`, according to your enviroment. Note that if you want to perform search on GPUs, you need to install the version of `faiss-gpu` compatible with your CUDA. In some cases (usually CUDA >= 11.0) `pip` installs a wrong version. If you encounter errors during search on GPUs, you may try installing it from `conda`. 
+You may also need faiss for dense retrieval. You can install either `faiss-cpu` or `faiss-gpu`, according to your enviroment. Note that if you want to perform search on GPUs, you need to install the version of `faiss-gpu` compatible with your CUDA. In some cases (usually CUDA >= 11.0) `pip` installs a wrong version. If you encounter errors during search on GPUs, you may try installing it from `conda`.
 
 ## Features
 

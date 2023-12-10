@@ -8,19 +8,20 @@
 # This solves this issue by only saving the offset value of the corresponding data, and read the data only when accessed.
 # However, the performance of this method is limited by speed of I/O of the corresponding hard drive. On most standard drives, this didn't slow the processing speed by much.
 #
-import os
 import json
+import os
+from argparse import ArgumentParser
+
 import numpy as np
 from tqdm import tqdm
-from argparse import ArgumentParser
 
 if __name__ == "__main__":
 
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', default="")
-    parser.add_argument('--input_folder_1', required=True)
-    parser.add_argument('--input_folder_2', required=True)
-    parser.add_argument('--output_folder', required=True)
+    parser.add_argument("--data_dir", default="")
+    parser.add_argument("--input_folder_1", required=True)
+    parser.add_argument("--input_folder_2", required=True)
+    parser.add_argument("--output_folder", required=True)
     args = parser.parse_args()
 
     input_path_1 = os.path.join(args.data_dir, args.input_folder_1)
@@ -33,8 +34,7 @@ if __name__ == "__main__":
 
     # load input 1
     print("Indexing input 1...")
-    file_list_1 = [listx for listx in os.listdir(
-        input_path_1) if "json" in listx]
+    file_list_1 = [listx for listx in os.listdir(input_path_1) if "json" in listx]
     # Load all negatives for each query in file_list 1
     query_data_dict = {}
     file_ops_list = []
@@ -55,8 +55,7 @@ if __name__ == "__main__":
         fi.seek(0, 0)
         file_ops_list.append(fi)
     # load input 2 & write mix
-    file_list_2 = [listx for listx in os.listdir(
-        input_path_2) if "json" in listx]
+    file_list_2 = [listx for listx in os.listdir(input_path_2) if "json" in listx]
     print("Appending to input 2...")
     # append all negative of input 2 to list
     neg_num_list = []
@@ -67,8 +66,9 @@ if __name__ == "__main__":
         i += 1
         file_2 = os.path.join(input_path_2, file)
         output_file = os.path.join(output_path, file)
-        with open(file_2, "r", encoding="utf-8") as fi, \
-                open(output_file, "w", encoding="utf-8") as fw:
+        with open(file_2, "r", encoding="utf-8") as fi, open(
+            output_file, "w", encoding="utf-8"
+        ) as fw:
             for line in tqdm(fi):
                 data = json.loads(line)
                 query = data["query"]
@@ -85,16 +85,17 @@ if __name__ == "__main__":
                     diff_num += 1
 
                 mix_example = {
-                    'query': query,
-                    'positives': positives,
-                    'negatives': negatives,
+                    "query": query,
+                    "positives": positives,
+                    "negatives": negatives,
                 }
-                fw.write(json.dumps(mix_example) + '\n')
+                fw.write(json.dumps(mix_example) + "\n")
     for f in file_ops_list:
         f.close()
     # number of querys that only appears in input 2
     print("Mixing done.")
     print(diff_num, " new queries appeared in input 2.")
     # average negatives of the joined file
-    print(np.mean(neg_num_list),
-          " negatives is appended to each query in average in combined data.")
+    print(
+        np.mean(neg_num_list), " negatives is appended to each query in average in combined data."
+    )

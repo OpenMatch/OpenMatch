@@ -2,17 +2,18 @@
 
 import csv
 import json
+import pathlib
 import warnings
 from dataclasses import dataclass
-from typing import Dict, List, Any
-import pathlib
+from typing import Any, Dict, List
 
 import datasets
 import torch
 from transformers import PreTrainedTokenizer
 
 try:
-    from opendelta import BitFitModel, AdapterModel, PrefixModel, LoraModel
+    from opendelta import AdapterModel, BitFitModel, LoraModel, PrefixModel
+
     _opendelta_available = True
 except ModuleNotFoundError:
     _opendelta_available = False
@@ -26,10 +27,10 @@ class SimpleTrainPreProcessor:
 
     doc_max_len: int = 128
     query_max_len: int = 32
-    columns = ['text_id', 'title', 'text']
-    title_field = 'title'
-    text_field = 'text'
-    query_field = 'text'
+    columns = ["text_id", "title", "text"]
+    title_field = "title"
+    text_field = "text"
+    query_field = "text"
     doc_template: str = None
     query_template: str = None
     allow_not_found: bool = False
@@ -37,25 +38,25 @@ class SimpleTrainPreProcessor:
     def __post_init__(self):
         self.queries = self.read_queries(self.query_file)
         self.collection = datasets.load_dataset(
-            'csv',
+            "csv",
             data_files=self.collection_file,
             column_names=self.columns,
-            delimiter='\t',
-        )['train']
+            delimiter="\t",
+        )["train"]
 
     @staticmethod
     def read_queries(queries):
         qmap = {}
         with open(queries) as f:
             for l in f:
-                qid, qry = l.strip().split('\t')
+                qid, qry = l.strip().split("\t")
                 qmap[qid] = qry
         return qmap
 
     @staticmethod
     def read_qrel(relevance_file):
         qrel = {}
-        with open(relevance_file, encoding='utf8') as f:
+        with open(relevance_file, encoding="utf8") as f:
             tsvreader = csv.reader(f, delimiter="\t")
             for [topicid, _, docid, rel] in tsvreader:
                 assert rel == "1"
@@ -69,12 +70,13 @@ class SimpleTrainPreProcessor:
         if self.query_template is None:
             query = self.queries[q]
         else:
-            query = fill_template(self.query_template, data={self.query_field: self.queries[q]}, allow_not_found=self.allow_not_found)
+            query = fill_template(
+                self.query_template,
+                data={self.query_field: self.queries[q]},
+                allow_not_found=self.allow_not_found,
+            )
         query_encoded = self.tokenizer.encode(
-            query,
-            add_special_tokens=False,
-            max_length=self.query_max_len,
-            truncation=True
+            query, add_special_tokens=False, max_length=self.query_max_len, truncation=True
         )
         return query_encoded
 
@@ -86,13 +88,12 @@ class SimpleTrainPreProcessor:
         if self.doc_template is None:
             content = title + self.tokenizer.sep_token + body
         else:
-            content = fill_template(self.doc_template, data=entry, allow_not_found=self.allow_not_found)
+            content = fill_template(
+                self.doc_template, data=entry, allow_not_found=self.allow_not_found
+            )
 
         passage_encoded = self.tokenizer.encode(
-            content,
-            add_special_tokens=False,
-            max_length=self.doc_max_len,
-            truncation=True
+            content, add_special_tokens=False, max_length=self.doc_max_len, truncation=True
         )
 
         return passage_encoded
@@ -100,9 +101,9 @@ class SimpleTrainPreProcessor:
     def process_one(self, train):
         q, pp, nn = train
         train_example = {
-            'query': self.get_query(q),
-            'positives': [self.get_passage(p) for p in pp],
-            'negatives': [self.get_passage(n) for n in nn],
+            "query": self.get_query(q),
+            "positives": [self.get_passage(p) for p in pp],
+            "negatives": [self.get_passage(n) for n in nn],
         }
 
         return json.dumps(train_example)
@@ -111,7 +112,7 @@ class SimpleTrainPreProcessor:
 @dataclass
 class SimpleCollectionPreProcessor:
     tokenizer: PreTrainedTokenizer
-    separator: str = '\t'
+    separator: str = "\t"
     max_length: int = 128
 
     def process_line(self, line: str):
@@ -121,16 +122,15 @@ class SimpleCollectionPreProcessor:
             self.tokenizer.sep_token.join(text),
             add_special_tokens=False,
             max_length=self.max_length,
-            truncation=True
+            truncation=True,
         )
-        encoded = {
-            'text_id': text_id,
-            'text': text_encoded
-        }
+        encoded = {"text_id": text_id, "text": text_encoded}
         return json.dumps(encoded)
 
 
-def save_as_trec(rank_result: Dict[str, Dict[str, Dict[str, Any]]], output_path: str, run_id: str = "OpenMatch"):
+def save_as_trec(
+    rank_result: Dict[str, Dict[str, Dict[str, Any]]], output_path: str, run_id: str = "OpenMatch"
+):
     """
     Save the rank result as TREC format:
     <query_id> Q0 <doc_id> <rank> <score> <run_id>
@@ -139,7 +139,9 @@ def save_as_trec(rank_result: Dict[str, Dict[str, Dict[str, Any]]], output_path:
     with open(output_path, "w") as f:
         for qid in rank_result:
             # sort the results by score
-            sorted_results = sorted(rank_result[qid].items(), key=lambda x: x[1]["score"], reverse=True)
+            sorted_results = sorted(
+                rank_result[qid].items(), key=lambda x: x[1]["score"], reverse=True
+            )
             for i, (doc_id, score) in enumerate(sorted_results):
                 f.write("{} Q0 {} {} {} {}\n".format(qid, doc_id, i + 1, score["score"], run_id))
 
@@ -179,7 +181,7 @@ def load_from_trec(input_path: str, as_list: bool = False, max_len_per_q: int = 
 
 def load_positives(relevance_file, threshold=1):
     qrel = {}
-    with open(relevance_file, encoding='utf8') as f:
+    with open(relevance_file, encoding="utf8") as f:
         tsvreader = csv.reader(f, delimiter="\t")
         for [topicid, _, docid, rel] in tsvreader:
             rel = int(rel)
@@ -220,12 +222,14 @@ def find_all_markers(template: str):
         end = template.find(">", start)
         if end == -1:
             break
-        markers.append(template[start + 1:end])
+        markers.append(template[start + 1 : end])
         start = end + 1
     return markers
 
 
-def fill_template(template: str, data: Dict, markers: List[str] = None, allow_not_found: bool = False):
+def fill_template(
+    template: str, data: Dict, markers: List[str] = None, allow_not_found: bool = False
+):
     """
     Fill a template with data.
     """
@@ -242,12 +246,17 @@ def fill_template(template: str, data: Dict, markers: List[str] = None, allow_no
                 break
         if not found:
             if allow_not_found:
-                warnings.warn("Marker '{}' not found in data. Replacing it with an empty string.".format(marker), RuntimeWarning)
+                warnings.warn(
+                    "Marker '{}' not found in data. Replacing it with an empty string.".format(
+                        marker
+                    ),
+                    RuntimeWarning,
+                )
                 content = ""
             else:
                 raise ValueError("Cannot find the marker '{}' in the data".format(marker))
         template = template.replace("<{}>".format(marker), str(content))
-    return template 
+    return template
 
 
 def merge_retrieval_results_by_score(results: List[Dict[str, Dict[str, float]]], topk: int = 100):
@@ -263,24 +272,30 @@ def merge_retrieval_results_by_score(results: List[Dict[str, Dict[str, float]]],
                 if doc_id not in merged_results[qid]:
                     merged_results[qid][doc_id] = result[qid][doc_id]
     for qid in merged_results:
-        merged_results[qid] = {k: v for k, v in sorted(merged_results[qid].items(), key=lambda x: x[1], reverse=True)[:topk]}
+        merged_results[qid] = {
+            k: v
+            for k, v in sorted(merged_results[qid].items(), key=lambda x: x[1], reverse=True)[:topk]
+        }
     return merged_results
 
 
 # Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(token_embeddings, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(
+        input_mask_expanded.sum(1), min=1e-9
+    )
 
 
 def get_delta_model_class(model_type):
     if not _opendelta_available:
         raise ValueError(
-            'OpenDelta package not available. You can obtain it from https://github.com/thunlp/OpenDelta.')
+            "OpenDelta package not available. You can obtain it from https://github.com/thunlp/OpenDelta."
+        )
     delta_models = {
-        'bitfit': BitFitModel,
-        'adapter': AdapterModel,
-        'prefix': PrefixModel,
-        'lora': LoraModel
+        "bitfit": BitFitModel,
+        "adapter": AdapterModel,
+        "prefix": PrefixModel,
+        "lora": LoraModel,
     }
     return delta_models[model_type]

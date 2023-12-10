@@ -46,7 +46,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.retrieve  \
     --dataloader_num_workers 1 \
     --use_gpu \
 
-     
+
 # Finally, We evaluate the MRR@10 on the dev set.
 echo "Evaluating..."
 python $OPENMATCH_SCRIPTS_DIR/evaluate.py -m mrr_cut.10 \

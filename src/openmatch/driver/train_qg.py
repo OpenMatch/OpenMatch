@@ -4,13 +4,24 @@ import logging
 import os
 import sys
 
-from transformers import (AutoConfig, AutoTokenizer, DefaultDataCollator,
-                          HfArgumentParser, Seq2SeqTrainer,
-                          T5ForConditionalGeneration, set_seed)
+from transformers import (
+    AutoConfig,
+    AutoTokenizer,
+    DefaultDataCollator,
+    HfArgumentParser,
+    Seq2SeqTrainer,
+    T5ForConditionalGeneration,
+    set_seed,
+)
 
 from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import QGTrainingArguments as TrainingArguments
-from openmatch.dataset import MappingQGTrainDataset, StreamQGTrainDataset, MappingCQGTrainDataset, StreamCQGTrainDataset
+from openmatch.dataset import (
+    MappingCQGTrainDataset,
+    MappingQGTrainDataset,
+    StreamCQGTrainDataset,
+    StreamQGTrainDataset,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +30,9 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, training_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -27,10 +40,10 @@ def main():
         training_args: TrainingArguments
 
     if (
-            os.path.exists(training_args.output_dir)
-            and os.listdir(training_args.output_dir)
-            and training_args.do_train
-            and not training_args.overwrite_output_dir
+        os.path.exists(training_args.output_dir)
+        and os.listdir(training_args.output_dir)
+        and training_args.do_train
+        and not training_args.overwrite_output_dir
     ):
         raise ValueError(
             f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
@@ -73,21 +86,29 @@ def main():
     )
 
     if training_args.contrastive:
-        train_dataset_cls = MappingCQGTrainDataset if training_args.use_mapping_dataset else StreamCQGTrainDataset
+        train_dataset_cls = (
+            MappingCQGTrainDataset if training_args.use_mapping_dataset else StreamCQGTrainDataset
+        )
     else:
-        train_dataset_cls = MappingQGTrainDataset if training_args.use_mapping_dataset else StreamQGTrainDataset
+        train_dataset_cls = (
+            MappingQGTrainDataset if training_args.use_mapping_dataset else StreamQGTrainDataset
+        )
     train_dataset = train_dataset_cls(
-        tokenizer, 
-        data_args, 
-        shuffle_seed=training_args.seed, 
-        cache_dir=data_args.data_cache_dir or model_args.cache_dir
+        tokenizer,
+        data_args,
+        shuffle_seed=training_args.seed,
+        cache_dir=data_args.data_cache_dir or model_args.cache_dir,
     )
-    eval_dataset = train_dataset_cls(
-        tokenizer, 
-        data_args, 
-        is_eval=True, 
-        cache_dir=data_args.data_cache_dir or model_args.cache_dir
-    ) if data_args.eval_path is not None else None
+    eval_dataset = (
+        train_dataset_cls(
+            tokenizer,
+            data_args,
+            is_eval=True,
+            cache_dir=data_args.data_cache_dir or model_args.cache_dir,
+        )
+        if data_args.eval_path is not None
+        else None
+    )
 
     trainer = Seq2SeqTrainer(
         model=model,
@@ -95,7 +116,7 @@ def main():
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        data_collator=DefaultDataCollator()
+        data_collator=DefaultDataCollator(),
     )
     train_dataset.trainer = trainer
 

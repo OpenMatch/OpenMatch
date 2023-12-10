@@ -4,13 +4,13 @@ import logging
 import os
 import sys
 
-from openmatch.arguments import DataArguments
+from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
+
+from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import RRTrainingArguments as TrainingArguments
-from openmatch.arguments import ModelArguments
-from openmatch.dataset import PairCollator, StreamRRTrainDataset, MappingRRTrainDataset
+from openmatch.dataset import MappingRRTrainDataset, PairCollator, StreamRRTrainDataset
 from openmatch.modeling import RRModel
 from openmatch.trainer import RRTrainer as Trainer
-from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,9 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, training_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -27,10 +29,10 @@ def main():
         training_args: TrainingArguments
 
     if (
-            os.path.exists(training_args.output_dir)
-            and os.listdir(training_args.output_dir)
-            and training_args.do_train
-            and not training_args.overwrite_output_dir
+        os.path.exists(training_args.output_dir)
+        and os.listdir(training_args.output_dir)
+        and training_args.do_train
+        and not training_args.overwrite_output_dir
     ):
         raise ValueError(
             f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
@@ -75,19 +77,25 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    train_dataset_cls = MappingRRTrainDataset if training_args.use_mapping_dataset else StreamRRTrainDataset
-    train_dataset = train_dataset_cls(
-        tokenizer, 
-        data_args, 
-        shuffle_seed=training_args.seed, 
-        cache_dir=data_args.data_cache_dir or model_args.cache_dir
+    train_dataset_cls = (
+        MappingRRTrainDataset if training_args.use_mapping_dataset else StreamRRTrainDataset
     )
-    eval_dataset = train_dataset_cls(
-        tokenizer, 
-        data_args, 
-        is_eval=True,
-        cache_dir=data_args.data_cache_dir or model_args.cache_dir
-    ) if data_args.eval_path is not None else None
+    train_dataset = train_dataset_cls(
+        tokenizer,
+        data_args,
+        shuffle_seed=training_args.seed,
+        cache_dir=data_args.data_cache_dir or model_args.cache_dir,
+    )
+    eval_dataset = (
+        train_dataset_cls(
+            tokenizer,
+            data_args,
+            is_eval=True,
+            cache_dir=data_args.data_cache_dir or model_args.cache_dir,
+        )
+        if data_args.eval_path is not None
+        else None
+    )
 
     trainer = Trainer(
         model=model,
@@ -96,9 +104,7 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=PairCollator(
-            tokenizer,
-            max_p_len=data_args.p_max_len,
-            max_q_len=data_args.q_max_len
+            tokenizer, max_p_len=data_args.p_max_len, max_q_len=data_args.q_max_len
         ),
     )
     train_dataset.trainer = trainer

@@ -10,9 +10,9 @@ PORT="1234"
 ## 17 BEIR Datasets.
 ## *************************************
 # Path to store dataset files.
-export DATA_DIR=/data/private/dataset/beir 
+export DATA_DIR=/data/private/dataset/beir
 # Folders of dataset files (Placed under DATA_DIR by default).
-dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scidocs scifact nq hotpotqa signal1m trec-news robust04 dbpedia-entity fever climate-fever bioasq) 
+dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scidocs scifact nq hotpotqa signal1m trec-news robust04 dbpedia-entity fever climate-fever bioasq)
 
 # ## *************************************
 # # The CQADupStack dataset contains 12 small datasets.
@@ -20,19 +20,19 @@ dataset_name_list=(trec-covid nfcorpus fiqa arguana webis-touche2020 quora scido
 # # Path to store CQADupStack dataset files.
 # export DATA_DIR=/data/private/dataset/beir/cqadupstack
 # # Folders of dataset files (Placed under DATA_DIR by default).
-# dataset_name_list=(android english gaming gis mathematica physics programmers stats tex unix webmasters wordpress) 
+# dataset_name_list=(android english gaming gis mathematica physics programmers stats tex unix webmasters wordpress)
 
 
 for dataset_name in ${dataset_name_list[@]}
 do
     export infer_job_name=inference.${train_job_name}.${dataset_name}
-    
+
     if [ ${dataset_name} == fiqa ] || [ ${dataset_name} == signal1m ]
     then
         export q_max_len=64
         export p_max_len=128
         echo ${infer_job_name}
-        
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -48,14 +48,14 @@ do
         --overwrite_output_dir \
         --use_split_search \
         --max_inmem_docs 5000000 \
-    
-    
+
+
     elif [ ${dataset_name} == arguana ]
     then
         export q_max_len=128
         export p_max_len=128
         echo ${infer_job_name}
-        
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -72,13 +72,13 @@ do
         --remove_identical \
         --use_split_search \
         --max_inmem_docs 5000000 \
-    
+
     elif [ ${dataset_name} == quora ]
     then
         export q_max_len=64
         export p_max_len=128
         echo ${infer_job_name}
-        
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -95,14 +95,14 @@ do
         --remove_identical \
         --use_split_search \
         --max_inmem_docs 5000000 \
-    
-    
+
+
     elif [ ${dataset_name} == scifact ] || [ ${dataset_name} == trec-news ]
     then
         export q_max_len=64
         export p_max_len=256
         echo ${infer_job_name}
-        
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -118,16 +118,16 @@ do
         --overwrite_output_dir \
         --use_split_search \
         --max_inmem_docs 5000000 \
-        
-        
-    
+
+
+
     elif [ ${dataset_name} == robust04 ]
     then
         export q_max_len=64
         export p_max_len=256
         echo ${infer_job_name}
-        
-        
+
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -143,13 +143,13 @@ do
         --overwrite_output_dir \
         --use_split_search \
         --max_inmem_docs 5000000 \
-    
-    
+
+
     else
         export q_max_len=64
         export p_max_len=128
         echo ${infer_job_name}
-        
+
         CUDA_VISIBLE_DEVICES=${TOT_CUDA} OMP_NUM_THREADS=1 python -m torch.distributed.launch --nproc_per_node=${CUDA_NUM} --master_port=${PORT} -m openmatch.driver.beir_eval_pipeline \
         --data_dir ${DATA_DIR}/${dataset_name} \
         --model_name_or_path ${OUTPUT_DIR}/${train_job_name} \
@@ -165,6 +165,6 @@ do
         --overwrite_output_dir \
         --use_split_search \
         --max_inmem_docs 5000000 \
-        
+
     fi
 done

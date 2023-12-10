@@ -13,6 +13,7 @@ class QPCollator(DataCollatorWithPadding):
     and pass batch separately to the actual collator.
     Abstract out data detail for the model.
     """
+
     max_q_len: int = 32
     max_p_len: int = 128
 
@@ -27,13 +28,13 @@ class QPCollator(DataCollatorWithPadding):
 
         q_collated = self.tokenizer.pad(
             qq,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len,
             return_tensors="pt",
         )
         d_collated = self.tokenizer.pad(
             dd,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_p_len,
             return_tensors="pt",
         )
@@ -48,6 +49,7 @@ class PairCollator(DataCollatorWithPadding):
     and pass batch separately to the actual collator.
     Abstract out data detail for the model.
     """
+
     max_q_len: int = 32
     max_p_len: int = 128
 
@@ -62,13 +64,13 @@ class PairCollator(DataCollatorWithPadding):
 
         pos_pair_collated = self.tokenizer.pad(
             pos_pairs,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len + self.max_p_len + 2,
             return_tensors="pt",
         )
         neg_pair_collated = self.tokenizer.pad(
             neg_pairs,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len + self.max_p_len + 2,
             return_tensors="pt",
         )
@@ -97,19 +99,19 @@ class PairwiseDistillationCollator(DataCollatorWithPadding):
 
         q_collated = self.tokenizer.pad(
             qq,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len,
             return_tensors="pt",
         )
         positives_collated = self.tokenizer.pad(
             positives,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_p_len,
             return_tensors="pt",
         )
         negatives_collated = self.tokenizer.pad(
             negatives,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_p_len,
             return_tensors="pt",
         )
@@ -136,13 +138,13 @@ class ListwiseDistillationCollator(DataCollatorWithPadding):
 
         q_collated = self.tokenizer.pad(
             qq,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len,
             return_tensors="pt",
         )
         d_collated = self.tokenizer.pad(
             dd,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_p_len,
             return_tensors="pt",
         )
@@ -166,6 +168,7 @@ class RRInferenceCollator(DefaultDataCollator):
         doc_ids = [x["doc_id"] for x in features]
         collated_features = super().__call__(features)
         return query_ids, doc_ids, collated_features
+
 
 @dataclass
 class CQGInferenceCollator(DefaultDataCollator):

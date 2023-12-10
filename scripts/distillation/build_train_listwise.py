@@ -18,18 +18,10 @@ data_args, other_args = parser.parse_args_into_dataclasses()
 
 tokenizer = AutoTokenizer.from_pretrained(other_args.tokenizer_name, use_fast=True)
 query_dataset = InferenceDataset.load(
-    tokenizer=tokenizer,
-    data_args=data_args,
-    is_query=True,
-    full_tokenization=False,
-    stream=False
+    tokenizer=tokenizer, data_args=data_args, is_query=True, full_tokenization=False, stream=False
 )
 corpus_dataset = InferenceDataset.load(
-    tokenizer=tokenizer,
-    data_args=data_args,
-    is_query=False,
-    full_tokenization=False,
-    stream=False
+    tokenizer=tokenizer, data_args=data_args, is_query=False, full_tokenization=False, stream=False
 )
 run = load_from_trec(other_args.trec_file)
 
@@ -40,7 +32,9 @@ if not os.path.exists(save_dir):
 with open(other_args.save_to, "w") as fout:
     for qid, doc_dict in tqdm(run.items()):
         docs_and_scores = list(doc_dict.items())
-        docs_and_scores = random.sample(docs_and_scores, min(other_args.n_sample, len(docs_and_scores)))
+        docs_and_scores = random.sample(
+            docs_and_scores, min(other_args.n_sample, len(docs_and_scores))
+        )
         train_example = {
             "query": query_dataset[qid]["input_ids"],
             "docs": [corpus_dataset[doc_id]["input_ids"] for doc_id, _ in docs_and_scores],

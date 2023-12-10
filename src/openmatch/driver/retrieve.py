@@ -2,14 +2,20 @@ import logging
 import os
 import sys
 
+from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+
 from openmatch.arguments import DataArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever
-from openmatch.utils import save_as_trec, get_delta_model_class, load_positives, load_beir_positives
-from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+from openmatch.utils import (
+    get_delta_model_class,
+    load_beir_positives,
+    load_positives,
+    save_as_trec,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +26,9 @@ def main():
     parser.add_argument("--qrels", type=str, default=None)
     parser.add_argument("--beir", action="store_true")
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, encoding_args, other_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, encoding_args, other_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, encoding_args, other_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -68,7 +76,9 @@ def main():
 
     if model_args.param_efficient_method:
         model_class = get_delta_model_class(model_args.param_efficient_method)
-        delta_model = model_class.from_finetuned(model_args.model_name_or_path + '/delta_model', model, local_files_only=True)
+        delta_model = model_class.from_finetuned(
+            model_args.model_name_or_path + "/delta_model", model, local_files_only=True
+        )
         logger.info("Using param efficient method: %s", model_args.param_efficient_method)
 
     query_dataset = InferenceDataset.load(
@@ -79,7 +89,7 @@ def main():
         batch_size=encoding_args.per_device_eval_batch_size,
         num_processes=encoding_args.world_size,
         process_index=encoding_args.process_index,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     retriever = Retriever.from_embeddings(model, encoding_args)
@@ -88,7 +98,11 @@ def main():
         if not other_args.add_ground_truth:
             save_as_trec(result, encoding_args.trec_save_path)
         else:
-            positives = load_beir_positives(other_args.qrels) if other_args.beir else load_positives(other_args.qrels)
+            positives = (
+                load_beir_positives(other_args.qrels)
+                if other_args.beir
+                else load_positives(other_args.qrels)
+            )
             # insert ground truth
             for query_id, query_result in result.items():
                 if query_id in positives:
@@ -97,5 +111,5 @@ def main():
             save_as_trec(result, encoding_args.trec_save_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

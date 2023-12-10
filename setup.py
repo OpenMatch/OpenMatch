@@ -15,7 +15,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Topic :: Text Processing :: Indexing",
-        "Intended Audience :: Information Technology"
+        "Intended Audience :: Information Technology",
     ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
@@ -24,5 +24,5 @@ setuptools.setup(
         "transformers>=4.21.3",
         "datasets>=2.10.1",
         "sentencepiece",
-    ]
+    ],
 )

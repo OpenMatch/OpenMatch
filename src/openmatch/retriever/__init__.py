@@ -1,3 +1,3 @@
+from .contrastive_query_generator import ContrastiveQueryGenerator, CQGPredictDataset
 from .dense_retriever import Retriever, SuccessiveRetriever
-from .reranker import RRPredictDataset, Reranker
-from .contrastive_query_generator import CQGPredictDataset, ContrastiveQueryGenerator
+from .reranker import Reranker, RRPredictDataset

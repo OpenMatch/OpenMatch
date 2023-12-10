@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
-from transformers import DataCollatorWithPadding, DefaultDataCollator
 import torch
+from transformers import DataCollatorWithPadding, DefaultDataCollator
+
+
 @dataclass
 class QPCollator(DataCollatorWithPadding):
     """
@@ -9,6 +11,7 @@ class QPCollator(DataCollatorWithPadding):
     and pass batch separately to the actual collator.
     Abstract out data detail for the model.
     """
+
     max_q_len: int = 32
     max_p_len: int = 128
     max_l_len: int = 32
@@ -25,24 +28,24 @@ class QPCollator(DataCollatorWithPadding):
             dd = sum(dd, [])
 
         if isinstance(ll[0], list):
-            ll= sum(ll[0],[])
+            ll = sum(ll[0], [])
         q_collated = self.tokenizer.pad(
             qq,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_q_len,
             return_tensors="pt",
         )
         d_collated = self.tokenizer.pad(
             dd,
-            padding='max_length',
+            padding="max_length",
             max_length=self.max_p_len,
             return_tensors="pt",
         )
 
-        if ll[0]!=None:
+        if ll[0] != None:
             l_collated = self.tokenizer.pad(
                 ll,
-                padding='max_length',
+                padding="max_length",
                 max_length=self.max_l_len,
                 return_tensors="pt",
             )
@@ -50,5 +53,5 @@ class QPCollator(DataCollatorWithPadding):
             l_collated = l_collated.input_ids
             l_collated[l_collated == self.tokenizer.pad_token_id] = -100
         else:
-            l_collated=torch.tensor([0])
+            l_collated = torch.tensor([0])
         return q_collated, d_collated, l_collated

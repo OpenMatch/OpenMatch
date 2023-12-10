@@ -5,9 +5,10 @@ import logging
 import numpy as np
 import pytrec_eval
 from datasets import load_dataset
+from tqdm import tqdm
+
 from openmatch.qa_utils import SimpleTokenizer, has_answers
 from openmatch.utils import load_from_trec
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def eval_mrr(qrel, run, cutoff=None):
 
 
 def print_line(measure, scope, value):
-    print('{:25s}{:8s}{:.4f}'.format(measure, scope, value))
+    print("{:25s}{:8s}{:.4f}".format(measure, scope, value))
 
 
 if __name__ == "__main__":
@@ -94,12 +95,11 @@ if __name__ == "__main__":
 
         exit(0)
 
-    with open(args.qrel, 'r') as f_qrel:
+    with open(args.qrel, "r") as f_qrel:
         qrel = pytrec_eval.parse_qrel(f_qrel)
 
-    with open(args.run, 'r') as f_run:
+    with open(args.run, "r") as f_run:
         run = pytrec_eval.parse_run(f_run)
-
 
     if args.measure is not None and "mrr" in args.measure:
 
@@ -129,7 +129,8 @@ if __name__ == "__main__":
         for measure in sorted(query_measures.keys()):
             print_line(
                 measure,
-                'all',
+                "all",
                 pytrec_eval.compute_aggregated_measure(
-                    measure,
-                    [query_measures[measure] for query_measures in results.values()]))
+                    measure, [query_measures[measure] for query_measures in results.values()]
+                ),
+            )

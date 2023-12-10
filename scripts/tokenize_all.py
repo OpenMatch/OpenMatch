@@ -4,10 +4,11 @@ import random
 from functools import partial
 from multiprocessing import Pool
 
-from openmatch.arguments import DataArguments
-from openmatch.dataset import InferenceDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, HfArgumentParser
+
+from openmatch.arguments import DataArguments
+from openmatch.dataset import InferenceDataset
 
 
 def reformat_output(x, all_markers):
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         is_query=other_args.is_query,
         mode="dict_processed",
         full_tokenization=False,
-        stream=True
+        stream=True,
     )
 
     save_dir = os.path.split(other_args.save_to)[0]
@@ -41,7 +42,7 @@ if __name__ == "__main__":
         os.makedirs(save_dir)
 
     reformat_output_partial = partial(reformat_output, all_markers=data_args.all_markers.split(","))
-    with open(other_args.save_to, 'w') as f:
+    with open(other_args.save_to, "w") as f:
         with Pool(other_args.num_workers) as p:
             for x in tqdm(p.imap(reformat_output_partial, dataset)):
                 f.write(json.dumps(x) + "\n")

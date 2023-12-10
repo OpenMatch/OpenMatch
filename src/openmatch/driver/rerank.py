@@ -2,14 +2,13 @@ import logging
 import os
 import sys
 
-from openmatch.arguments import DataArguments
-from openmatch.arguments import InferenceArguments
-from openmatch.arguments import ModelArguments
+from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+
+from openmatch.arguments import DataArguments, InferenceArguments, ModelArguments
 from openmatch.dataset import InferenceDataset
 from openmatch.modeling import RRModel
 from openmatch.retriever import Reranker
-from openmatch.utils import save_as_trec, load_from_trec
-from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+from openmatch.utils import load_from_trec, save_as_trec
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,9 @@ logger = logging.getLogger(__name__)
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, InferenceArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, inference_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, inference_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, inference_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -66,7 +67,7 @@ def main():
         full_tokenization=False,
         is_query=True,
         stream=False,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     corpus_dataset = InferenceDataset.load(
@@ -75,7 +76,7 @@ def main():
         full_tokenization=False,
         is_query=False,
         stream=False,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     run = load_from_trec(inference_args.trec_run_path, max_len_per_q=inference_args.reranking_depth)
@@ -87,5 +88,5 @@ def main():
         save_as_trec(result, inference_args.trec_save_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
