@@ -1,2 +1,0 @@
-from OpenMatch.modules.attentions.multi_head_attention import MultiHeadAttention
-from OpenMatch.modules.attentions.scaled_dot_product_attention import ScaledDotProductAttention

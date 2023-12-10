@@ -1,1 +1,0 @@
-from OpenMatch.extractors.classic_extractor import ClassicExtractor
