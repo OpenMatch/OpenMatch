@@ -1,6 +1,6 @@
 # T5 Weights Scaling
 
-For stable mixed-precision training on NVIDIA GPUs, it's recommended to scale the weights of the pre-trained T5 model. 
+For stable mixed-precision training on NVIDIA GPUs, it's recommended to scale the weights of the pre-trained T5 model.
 
 First you need to manually download the T5 model. Search for your model on Hugging Face, and switch to the "Files and versions" tab. Right click the download arrows, copy the download links of `config.json`, `pytorch_model.bin`, `spiece.model`, `tokenizer.json` and download them in your directory.
 

@@ -1,16 +1,16 @@
 import torch
 from torch import Tensor
-from torch.nn import functional as F
 from torch import distributed as dist
+from torch.nn import functional as F
 
 
 class SimpleContrastiveLoss:
-
-    def __call__(self, x: Tensor, y: Tensor, target: Tensor = None, reduction: str = 'mean'):
+    def __call__(self, x: Tensor, y: Tensor, target: Tensor = None, reduction: str = "mean"):
         if target is None:
             target_per_qry = y.size(0) // x.size(0)
             target = torch.arange(
-                0, x.size(0) * target_per_qry, target_per_qry, device=x.device, dtype=torch.long)
+                0, x.size(0) * target_per_qry, target_per_qry, device=x.device, dtype=torch.long
+            )
         logits = torch.matmul(x, y.transpose(0, 1))
         return F.cross_entropy(logits, target, reduction=reduction)
 
@@ -41,7 +41,7 @@ class DistributedContrastiveLoss(SimpleContrastiveLoss):
 class MarginRankingLoss:
     def __init__(self, margin: float = 1.0):
         self.margin = margin
-    
+
     def __call__(self, pos_scores: Tensor, neg_scores: Tensor):
         return torch.mean(F.relu(self.margin - pos_scores + neg_scores))
 
@@ -49,21 +49,25 @@ class MarginRankingLoss:
 class SoftMarginRankingLoss:
     def __init__(self, margin: float = 1.0):
         self.margin = margin
-    
+
     def __call__(self, pos_scores: Tensor, neg_scores: Tensor):
         return torch.mean(F.softplus(self.margin - pos_scores + neg_scores))
 
 
 class BinaryCrossEntropyLoss:
     def __call__(self, pos_scores: Tensor, neg_scores: Tensor):
-        return (F.binary_cross_entropy_with_logits(pos_scores, torch.ones_like(pos_scores)) 
-              + F.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores)))
+        return F.binary_cross_entropy_with_logits(
+            pos_scores, torch.ones_like(pos_scores)
+        ) + F.binary_cross_entropy_with_logits(neg_scores, torch.zeros_like(neg_scores))
 
 
 class CrossEntropyLoss:
     def __call__(self, pos_scores: Tensor, neg_scores: Tensor):
-        return (F.cross_entropy(pos_scores, torch.ones(pos_scores.shape[0], dtype=torch.long).to(pos_scores.device)) 
-              + F.cross_entropy(neg_scores, torch.zeros(neg_scores.shape[0], dtype=torch.long).to(pos_scores.device)))
+        return F.cross_entropy(
+            pos_scores, torch.ones(pos_scores.shape[0], dtype=torch.long).to(pos_scores.device)
+        ) + F.cross_entropy(
+            neg_scores, torch.zeros(neg_scores.shape[0], dtype=torch.long).to(pos_scores.device)
+        )
 
 
 rr_loss_functions = {

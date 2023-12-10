@@ -1,11 +1,11 @@
-import torch
-from transformers import AutoModel
-import copy
 import argparse
+import copy
+import glob
 import os
 import shutil
-import glob
 
+import torch
+from transformers import AutoModel
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -22,15 +22,15 @@ if __name__ == "__main__":
     new_state_dict = copy.deepcopy(state_dict)
 
     for i in range(args.num_layers):
-        new_state_dict[f'encoder.block.{i}.layer.0.SelfAttention.o.weight'] /= 100
-        new_state_dict[f'encoder.block.{i}.layer.1.DenseReluDense.wi.weight'] /= 10
-        new_state_dict[f'encoder.block.{i}.layer.1.DenseReluDense.wo.weight'] /= 10
+        new_state_dict[f"encoder.block.{i}.layer.0.SelfAttention.o.weight"] /= 100
+        new_state_dict[f"encoder.block.{i}.layer.1.DenseReluDense.wi.weight"] /= 10
+        new_state_dict[f"encoder.block.{i}.layer.1.DenseReluDense.wo.weight"] /= 10
 
-        new_state_dict[f'decoder.block.{i}.layer.1.EncDecAttention.o.weight'] /= 100
-        new_state_dict[f'decoder.block.{i}.layer.0.SelfAttention.o.weight'] /= 100
-        new_state_dict[f'decoder.block.{i}.layer.2.DenseReluDense.wi.weight'] /= 10
-        new_state_dict[f'decoder.block.{i}.layer.2.DenseReluDense.wo.weight'] /= 10
-    new_state_dict['shared.weight'] /= 100
+        new_state_dict[f"decoder.block.{i}.layer.1.EncDecAttention.o.weight"] /= 100
+        new_state_dict[f"decoder.block.{i}.layer.0.SelfAttention.o.weight"] /= 100
+        new_state_dict[f"decoder.block.{i}.layer.2.DenseReluDense.wi.weight"] /= 10
+        new_state_dict[f"decoder.block.{i}.layer.2.DenseReluDense.wo.weight"] /= 10
+    new_state_dict["shared.weight"] /= 100
 
     os.makedirs(args.output_model_path, exist_ok=True)
     torch.save(new_state_dict, os.path.join(args.output_model_path, "pytorch_model.bin"))

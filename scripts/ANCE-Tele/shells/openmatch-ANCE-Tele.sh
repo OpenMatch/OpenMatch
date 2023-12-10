@@ -35,7 +35,7 @@ PLM_DIR=$PLM_DIR bash ./download_model.sh
 fi
 if [ ! -f "$COLLECTION_DIR/qrels.dev.restructured.tsv" ] ; then
 echo "Downloading MS MARCO to $COLLECTION_DIR..."
-COLLECTION_DIR=$COLLECTION_DIR OPENMATCH_SCRIPTS_DIR=$OPENMATCH_SCRIPTS_DIR bash ./download_data.sh 
+COLLECTION_DIR=$COLLECTION_DIR OPENMATCH_SCRIPTS_DIR=$OPENMATCH_SCRIPTS_DIR bash ./download_data.sh
 fi
 mkdir -p $SCRIPT_LOG_DIR
 for ((i=0; i<$EPISODE_NUM; i++))
@@ -54,7 +54,7 @@ do
          $LOG_DIR/epi-$[$i+1].$PLM_NAME/ \
          $SCRIPT_LOG_DIR/epi-$[$i+1].train.log \
          $[ $EPISODE_NUM-$i-1 ] \
-        
+
     else
         echo "Starting Episode ${i} Mining..."
         source ./build_negative.sh $i ${CUDA_LIST[$i]} $MODEL_DIR/epi-${i}.${PLM_NAME}-cp20000/ \
@@ -79,7 +79,7 @@ do
         # Copy tokenizer config from original model, to make copied model complete
         cp -v ${PLM_DIR}/special_tokens_map.json $MODEL_DIR/epi-$[$i+1].${PLM_NAME}-cp20000/
         cp -v ${PLM_DIR}/vocab.txt $MODEL_DIR/epi-$[$i+1].${PLM_NAME}-cp20000/
-        cp -v ${PLM_DIR}/tokenizer_config.json $MODEL_DIR/epi-$[$i+1].${PLM_NAME}-cp20000/     
+        cp -v ${PLM_DIR}/tokenizer_config.json $MODEL_DIR/epi-$[$i+1].${PLM_NAME}-cp20000/
     fi
 done
 

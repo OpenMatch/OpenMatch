@@ -2,10 +2,10 @@
 
 import os
 from functools import lru_cache
-from typing import Callable, List, Union, Dict
+from typing import Callable, Dict, List, Union
 
 import datasets
-from datasets import load_dataset, Dataset
+from datasets import Dataset, load_dataset
 from PIL import Image
 from torch.utils.data import Dataset, IterableDataset
 from transformers import AutoProcessor, PreTrainedTokenizer, ProcessorMixin
@@ -16,7 +16,7 @@ from ..utils import fill_template, find_all_markers
 
 def get_idx(obj):
     example_id = obj.get("_id", None)
-    if example_id is None: 
+    if example_id is None:
         example_id = obj.get("id", None)
     if example_id is None:
         example_id = obj.get("text_id", None)
@@ -28,26 +28,25 @@ def get_idx(obj):
     return example_id
 
 
-class InferenceDataset():
-
+class InferenceDataset:
     def __init__(
-        self, 
+        self,
         data_files: Union[str, List[str]],
         data: List[Dict] = None,
         max_len: int = 128,
         template: str = None,
         column_names: str = None,
         all_markers: str = None,
-        tokenizer: PreTrainedTokenizer = None, 
+        tokenizer: PreTrainedTokenizer = None,
         processor: ProcessorMixin = None,
-        is_query: bool = False, 
-        full_tokenization: bool = True, 
+        is_query: bool = False,
+        full_tokenization: bool = True,
         mode: str = "processed",
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
         filter_fn: Callable = lambda x: True,
-        cache_dir: str = None
+        cache_dir: str = None,
     ):
         self.cache_dir = cache_dir
         self.is_query = is_query
@@ -60,7 +59,7 @@ class InferenceDataset():
 
         self.template = template
         self.column_names = column_names
-        
+
         self.full_tokenization = full_tokenization
         modes = ["raw", "dict_processed", "processed"]
         if mode not in modes:
@@ -79,54 +78,76 @@ class InferenceDataset():
             if self.template is None:
                 self.all_markers = None
             else:
-                self.all_markers = find_all_markers(self.template) if all_markers is None else all_markers.split(",")
+                self.all_markers = (
+                    find_all_markers(self.template)
+                    if all_markers is None
+                    else all_markers.split(",")
+                )
 
     def _prepare_data(self):
         raise NotImplementedError
 
     @classmethod
     def load(
-        cls, 
-        data_args: DataArguments = None, 
+        cls,
+        data_args: DataArguments = None,
         data: List[Dict] = None,
         data_files: Union[str, List[str]] = None,
         max_len: int = 128,
         template: str = None,
         column_names: str = None,
         all_markers: str = None,
-        tokenizer: PreTrainedTokenizer = None, 
+        tokenizer: PreTrainedTokenizer = None,
         processor: ProcessorMixin = None,
-        is_query: bool = False, 
-        full_tokenization: bool = True, 
+        is_query: bool = False,
+        full_tokenization: bool = True,
         mode: str = "processed",
         stream: bool = True,
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
         filter_fn: Callable = lambda x: True,
-        cache_dir: str = None
+        cache_dir: str = None,
     ):
-        max_len = max_len if max_len is not None else data_args.q_max_len if is_query else data_args.p_max_len
-        template = template if template is not None else data_args.query_template if is_query else data_args.doc_template
-        column_names = column_names if column_names is not None else data_args.query_column_names if is_query else data_args.doc_column_names
+        max_len = (
+            max_len
+            if max_len is not None
+            else data_args.q_max_len
+            if is_query
+            else data_args.p_max_len
+        )
+        template = (
+            template
+            if template is not None
+            else data_args.query_template
+            if is_query
+            else data_args.doc_template
+        )
+        column_names = (
+            column_names
+            if column_names is not None
+            else data_args.query_column_names
+            if is_query
+            else data_args.doc_column_names
+        )
         all_markers = all_markers if all_markers is not None else data_args.all_markers
         if data is not None:
             return StreamInMemoryDataset(
-                tokenizer=tokenizer, 
+                tokenizer=tokenizer,
                 processor=processor,
                 data_files=data_files,
                 max_len=max_len,
                 template=template,
                 all_markers=all_markers,
                 column_names=column_names,
-                is_query=is_query, 
-                full_tokenization=full_tokenization, 
+                is_query=is_query,
+                full_tokenization=full_tokenization,
                 mode=mode,
                 batch_size=batch_size,
                 num_processes=num_processes,
                 process_index=process_index,
                 filter_fn=filter_fn,
-                cache_dir=cache_dir
+                cache_dir=cache_dir,
             )
         if data_files is not None:
             data_files = [data_files] if isinstance(data_files, str) else data_files
@@ -142,32 +163,32 @@ class InferenceDataset():
         if cls_ is None:
             raise ValueError("Unsupported dataset file extension {}".format(ext))
         return cls_(
-            tokenizer=tokenizer, 
+            tokenizer=tokenizer,
             processor=processor,
             data_files=data_files,
             max_len=max_len,
             template=template,
             all_markers=all_markers,
             column_names=column_names,
-            is_query=is_query, 
-            full_tokenization=full_tokenization, 
+            is_query=is_query,
+            full_tokenization=full_tokenization,
             mode=mode,
             batch_size=batch_size,
             num_processes=num_processes,
             process_index=process_index,
             filter_fn=filter_fn,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
         )
 
     def _tokenize(self, example: str):
         return self.tokenizer(
-            example, 
-            add_special_tokens=self.full_tokenization, 
-            padding='max_length' if self.full_tokenization else False, 
-            truncation=True, 
-            max_length=self.max_len, 
-            return_attention_mask=self.full_tokenization, 
-            return_token_type_ids=False
+            example,
+            add_special_tokens=self.full_tokenization,
+            padding="max_length" if self.full_tokenization else False,
+            truncation=True,
+            max_length=self.max_len,
+            return_attention_mask=self.full_tokenization,
+            return_token_type_ids=False,
         )
 
     def process_one(self, example):
@@ -183,20 +204,27 @@ class InferenceDataset():
             example_id = get_idx(example)
             tokenized = {}
             for marker in self.all_markers:
-                tokenized[marker] = dict(self._tokenize(example[marker])) if (marker in example and example[marker] is not None) else None
+                tokenized[marker] = (
+                    dict(self._tokenize(example[marker]))
+                    if (marker in example and example[marker] is not None)
+                    else None
+                )
             return {"text_id": example_id, **tokenized}
         else:
             example_id = get_idx(example)
-            full_text = fill_template(self.template, example, self.all_markers, allow_not_found=True)
+            full_text = fill_template(
+                self.template, example, self.all_markers, allow_not_found=True
+            )
             tokenized = self._tokenize(full_text)
             return {"text_id": example_id, **tokenized}
 
 
 class StreamInferenceDataset(IterableDataset):
-
     def __iter__(self):
         real_batch_size = self.batch_size * self.num_processes
-        process_slice = range(self.process_index * self.batch_size, (self.process_index + 1) * self.batch_size)
+        process_slice = range(
+            self.process_index * self.batch_size, (self.process_index + 1) * self.batch_size
+        )
 
         current_batch = []
         for element in self.dataset:
@@ -214,7 +242,6 @@ class StreamInferenceDataset(IterableDataset):
 
 
 class MappingInferenceDataset(Dataset):
-
     @lru_cache(maxsize=None)
     def __getitem__(self, index):
         return self.process_one(self.dataset[index])
@@ -227,26 +254,18 @@ class MappingInferenceDataset(Dataset):
 
 
 class StreamJsonlDataset(StreamInferenceDataset, InferenceDataset):
-
     def _prepare_data(self):
         self.dataset = load_dataset(
-            "json", 
-            data_files=self.data_files, 
-            streaming=True, 
-            cache_dir=self.cache_dir
+            "json", data_files=self.data_files, streaming=True, cache_dir=self.cache_dir
         )["train"].filter(self.filter_fn)
         sample = list(self.dataset.take(1))[0]
         self.all_columns = sample.keys()
 
 
 class MappingJsonlDataset(MappingInferenceDataset, InferenceDataset):
-    
     def _prepare_data(self):
         hf_dataset = load_dataset(
-            "json", 
-            data_files=self.data_files, 
-            streaming=True, 
-            cache_dir=self.cache_dir
+            "json", data_files=self.data_files, streaming=True, cache_dir=self.cache_dir
         )["train"].filter(self.filter_fn)
         sample = list(hf_dataset.take(1))[0]
         self.all_columns = sample.keys()
@@ -256,34 +275,32 @@ class MappingJsonlDataset(MappingInferenceDataset, InferenceDataset):
 
 
 class StreamTsvDataset(StreamInferenceDataset, InferenceDataset):
-
     def _prepare_data(self):
         self.all_columns = self.column_names
         if self.all_columns is not None:
-            self.all_columns = self.all_columns.split(',')
+            self.all_columns = self.all_columns.split(",")
         self.dataset = load_dataset(
-            "csv", 
-            data_files=self.data_files, 
-            streaming=True, 
+            "csv",
+            data_files=self.data_files,
+            streaming=True,
             column_names=self.all_columns,
-            delimiter='\t',
-            cache_dir=self.cache_dir
+            delimiter="\t",
+            cache_dir=self.cache_dir,
         )["train"].filter(self.filter_fn)
 
 
 class MappingTsvDataset(MappingInferenceDataset, InferenceDataset):
-    
     def _prepare_data(self):
         self.all_columns = self.column_names
         if self.all_columns is not None:
-            self.all_columns = self.all_columns.split(',')
+            self.all_columns = self.all_columns.split(",")
         hf_dataset = load_dataset(
             "csv",
             data_files=self.data_files,
             streaming=True,
             column_names=self.all_columns,
-            delimiter='\t',
-            cache_dir=self.cache_dir
+            delimiter="\t",
+            cache_dir=self.cache_dir,
         )["train"].filter(self.filter_fn)
         self.dataset = {}
         for item in hf_dataset:
@@ -291,7 +308,6 @@ class MappingTsvDataset(MappingInferenceDataset, InferenceDataset):
 
 
 class StreamImageDataset(StreamInferenceDataset, InferenceDataset):
-
     def _prepare_data(self):
         self.is_image = True
         self.dataset = load_dataset(
@@ -303,7 +319,6 @@ class StreamImageDataset(StreamInferenceDataset, InferenceDataset):
 
 
 class StreamInMemoryDataset(StreamInferenceDataset, InferenceDataset):
-
     def _prepare_data(self):
         self.dataset = Dataset.from_list(self.data).filter(self.filter_fn)
         sample = self.dataset[0]

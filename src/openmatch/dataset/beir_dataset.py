@@ -25,19 +25,18 @@ def load_beir_qrels(qrels_file):
     return qrels
 
 
-class BEIRDataset():
-
+class BEIRDataset:
     def __init__(
-        self, 
-        tokenizer: PreTrainedTokenizer, 
-        data_args: DataArguments, 
-        full_tokenization: bool = True, 
+        self,
+        tokenizer: PreTrainedTokenizer,
+        data_args: DataArguments,
+        full_tokenization: bool = True,
         mode: str = "processed",
         stream: bool = True,
         batch_size: int = 1,
         num_processes: int = 1,
         process_index: int = 0,
-        cache_dir: str = None
+        cache_dir: str = None,
     ):
         logger.info("Loading corpus")
         self.corpus_dataset = InferenceDataset.load(
@@ -51,7 +50,7 @@ class BEIRDataset():
             batch_size=batch_size,
             num_processes=num_processes,
             process_index=process_index,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
         )
 
         split_names = ["train", "dev", "test"]
@@ -76,7 +75,7 @@ class BEIRDataset():
                     num_processes=num_processes,
                     process_index=process_index,
                     filter_fn=lambda x: x["_id"] in qids,
-                    cache_dir=cache_dir
+                    cache_dir=cache_dir,
                 )
             else:
                 logger.info(f"{split_name} queries and qrels not found")

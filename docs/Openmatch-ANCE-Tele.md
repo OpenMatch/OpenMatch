@@ -19,7 +19,7 @@ You may want to use `build_train_positive.py` in `scripts/ANCE-Tele` to do this 
 
 `python build_train_positive.py --qrel_file <QREL_FILE> --corpus_file <CORPUS_FILE> --save_to <SAVE_FILE_PATH> [--save_name <SAVE_FILE_NAME>]`
 
-This script reads from tab-seperated `<QREL_FILE>`, treating the first column as `query_id` and third column as first positive `document_id`. 
+This script reads from tab-seperated `<QREL_FILE>`, treating the first column as `query_id` and third column as first positive `document_id`.
 Then, it reads from the tab-seperated `<CORPUS_FILE>`, treating the first column as `document_id` and everything left as contents.
 For each query read, it prints `<query_id>\t<contents>\n` to `<SAVE_FILE_PATH>/<SAVE_FILE_NAME>`(`<SAVE_FILE_NAME>` defaults to `train.positive.txt` due to compatibility).
 
@@ -73,7 +73,7 @@ This package is provided with the necessary scripts for reproducing ANCE-Tele re
 If you're simply trying to reproduce the results in the paper, you may use the shell script to help you: see [Usage of Script](#usage-of-script) for details.
 
 If you're trying to do more experiments with the method in the paper, you may refer to [Manual Operation](#manual-operation) for a step-by-step guide.
-### <a id="usage-of-script"></a> Usage of Script 
+### <a id="usage-of-script"></a> Usage of Script
 
 **Important: Please install pytrec_eval into your environment (`pip install pytrec_eval`) before running the script.**
 
@@ -85,7 +85,7 @@ Switch to that directory, and configure the variables in `openmatch-ANCE-Tele.sh
 
 ```bash
 # The dir of the starting model.
-# If no model was found in this path, the script would automatically download 
+# If no model was found in this path, the script would automatically download
 PLM_DIR=~/datas/OpenMatch-New/models/co-condenser-marco
 # Path to openmatch scripts.
 OPENMATCH_SCRIPTS_DIR=../..
@@ -116,7 +116,7 @@ CUDA_LIST=("4,7" "4,7" "4,7")
 Then run the script with `. ./openmatch-ANCE-Tele.sh`.
 
 Notes:
-* `openmatch-ANCE-Tele.sh` would call `build_negative.sh`, `train.sh` and `evaluation.sh` to complete the negative-building section, training section and evaluation section. 
+* `openmatch-ANCE-Tele.sh` would call `build_negative.sh`, `train.sh` and `evaluation.sh` to complete the negative-building section, training section and evaluation section.
   If only one of the section is required (e.g. you're exploring the difference between different negative-building parameters), you may refer to the comments in the related shell script to call it.
 
 * This script would cut off the training procedure when the required checkpoint(20000 step) is acquired. Change this setting in `train.sh`.
@@ -152,7 +152,7 @@ First, download and extract RocketQA processed MS MARCO dataset into a folder (n
 
 ```bash
 wget  https://rocketqa.bj.bcebos.com/corpus/marco.tar.gz
-tar -zxf marco.tar.gz 
+tar -zxf marco.tar.gz
 rm -rf marco.tar.gz
 mv -v ./marco/* ./
 ```
@@ -241,7 +241,7 @@ This creates a TREC-style file `train.trec` in `${RETRIEVE_SAVE_DIR}`.
 Notes:
 
 * You may feel free to use multiple GPU for this stage: just change `CUDA_TO_USE` to something like `CUDA_TO_USE=0,1`.
-  
+
   `torch.distributed.launch` is not required; the indexes would be automatically split to all devices defined.
 
 * `${RETRIEVE_SAVE_DIR}` should exist before running this command; retriever may not automatically create this directory.
@@ -288,7 +288,7 @@ python $OPENMATCH_SCRIPTS_DIR/ANCE-Tele/build_hn.py  \
     --collection $COLLECTION_DIR/corpus.tsv  \
     --save_to ${TRAIN_SAVE_DIR}/hard_neg  \ #Path to save .jsonl files
     --depth 200 \ # Same as original paper does
-    --n_sample 30 
+    --n_sample 30
 # Positive negative
 python $OPENMATCH_SCRIPTS_DIR/ANCE-Tele/build_hn.py  \
     --tokenizer_name $CURRENT_MODEL_DIR  \
@@ -298,7 +298,7 @@ python $OPENMATCH_SCRIPTS_DIR/ANCE-Tele/build_hn.py  \
     --collection $COLLECTION_DIR/corpus.tsv  \
     --save_to ${TRAIN_SAVE_DIR}/train_pos  \
     --depth 200 \
-    --n_sample 30 
+    --n_sample 30
 ```
 This samples 30 negatives from TREC file, and group them with positive file to form trainer-compatible `.jsonl` training data files for training.
 
@@ -345,7 +345,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.train_dr  \
     --model_name_or_path $PREVIOUS_MODEL_DIR  \ # Starting model; Is $PLM_DIR for each episode in this implantation
     --do_train  \
     --save_steps 20000  \
-    --train_path ${TRAIN_FILE}  \ # Path to merged training file; Must not be a single file 
+    --train_path ${TRAIN_FILE}  \ # Path to merged training file; Must not be a single file
     --fp16  \
     --per_device_train_batch_size 8  \ # Total data per batch is 8
     --train_n_passages $N_PASSAGES  \ # 16 for first episode; 32 for later episodes
@@ -362,7 +362,7 @@ CUDA_VISIBLE_DEVICES=$CUDA_TO_USE python -m openmatch.driver.train_dr  \
 Notes:
 
 * In current version of OpenMatch, using iterable datasets in training may introduce a bias in negative selection, and thus affect the performance of trained models. Please use `--use_mapping_dataset`, as such problem does not occur in mapping datasets.
-  
+
   * However, huggingface datasets would generate a cache in `~/.cache` with the same size as training data does. If you're running low on disk space here, you may specify `--cache_dir ${CACHE_DIR}` to save the cache to somewhere else.
 
 * Be aware that a linear warm-up stage with length of 10% of all training steps is used in training; thus, the number of training epoch defined and `--dataloader_drop_last` may have an impact on all checkpoints generated.
@@ -418,13 +418,12 @@ These two steps are identical to the corresponding steps in [1. Negative Buildin
 
 Once dev-set passages has been retrieved (in standard TREC format), you may use evaluation scripts to evaluate the model's performance.
 
-OpenMatch is packed with an evaluation script (Requires `pytrec_eval` package) : `scripts/evaluate.py`. 
+OpenMatch is packed with an evaluation script (Requires `pytrec_eval` package) : `scripts/evaluate.py`.
 
 You may want to use this script to compute MRR@10:
 
 ```bash
 python $OPENMATCH_SCRIPTS_DIR/evaluate.py -m mrr_cut.10 \
 ${COLLECTION_DIR}/qrels.dev.restructured.tsv \ # Use the processed qrels file
-${RETRIEVE_SAVE_DIR}/dev.trec # The retrieved TREC file for dev set 
+${RETRIEVE_SAVE_DIR}/dev.trec # The retrieved TREC file for dev set
 ```
-

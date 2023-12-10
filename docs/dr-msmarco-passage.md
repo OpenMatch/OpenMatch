@@ -31,7 +31,7 @@ Find out negatives from the triples file:
 awk -v RS='\r\n' '$1==last {printf ",%s",$3; next} NR>1 {print "";} {last=$1; printf "%s\t%s",$1,$3;} END{print "";}' qidpidtriples.train.full.2.tsv > train.negatives.tsv
 ```
 
-Now you can build the train files: 
+Now you can build the train files:
 
 ```bash
 python scripts/msmarco/build_train.py \
@@ -82,7 +82,7 @@ python -m openmatch.driver.train_dr  \
     --evaluation_strategy steps  # evaluate every `eval_steps` steps
 ```
 
-The above command train a T5-based DR model for 3 epochs, evaluating it every 20,000 steps. Currently evaluation is just calculating the loss on the validation set; it may not correlate with actual retrieval performance very well. 
+The above command train a T5-based DR model for 3 epochs, evaluating it every 20,000 steps. Currently evaluation is just calculating the loss on the validation set; it may not correlate with actual retrieval performance very well.
 
 Note that the above sample uses T5 as the representation model. By default, the representation is extracted from the first token of the decoder output. To only use the encoder, set the `--encoder_only` flag on. You can also use other PLMs.
 

@@ -18,4 +18,3 @@ ANCE-Tele only trains with self-mined negatives (teleportation negatives) withou
   year={2022}
 }
 ```
-

@@ -31,7 +31,7 @@ Find out negatives from the triples file:
 awk -v RS='\r\n' '$1==last {printf ",%s",$3; next} NR>1 {print "";} {last=$1; printf "%s\t%s",$1,$3;} END{print "";}' qidpidtriples.train.full.2.tsv > train.negatives.tsv
 ```
 
-Now you can build the train files: 
+Now you can build the train files:
 
 ```bash
 # BERT-like models
@@ -101,7 +101,7 @@ python -m openmatch.driver.train_rr  \
     --dataloader_num_workers 1
 ```
 
-The above command train a BERT-based re-ranking model for 30 epochs, evaluating it every 100,00 steps. Currently evaluation is just calculating the loss on the validation set; it may not correlate with actual re-ranking performance very well. 
+The above command train a BERT-based re-ranking model for 30 epochs, evaluating it every 100,00 steps. Currently evaluation is just calculating the loss on the validation set; it may not correlate with actual re-ranking performance very well.
 
 You can set the loss function used during training via the `--loss_fn` argument, which can be set to one of the following values:
 
@@ -158,7 +158,7 @@ python -m openmatch.driver.rerank  \
     --fp16  \
     --trec_run_path /path/to/first-stage/trecrun/file  \
     --trec_save_path $RESULT_DIR/rr.trec  \
-    --dataloader_num_workers 1 
+    --dataloader_num_workers 1
 ```
 
 where `--trec_run_path` is the path to a run file in TREC format, produced by a previous-stage ranker (e.g. BM25). The command for monoT5 is as similar as just replacing `--model_name_or_path`.

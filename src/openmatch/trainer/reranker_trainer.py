@@ -23,8 +23,7 @@ class RRTrainer(Trainer):
         self.model.save(output_dir)
 
     def _prepare_inputs(
-            self,
-            inputs: Tuple[Dict[str, Union[torch.Tensor, Any]], ...]
+        self, inputs: Tuple[Dict[str, Union[torch.Tensor, Any]], ...]
     ) -> List[Dict[str, Union[torch.Tensor, Any]]]:
         prepared = []
         for x in inputs:
@@ -56,7 +55,7 @@ class RRTrainer(Trainer):
                 logits = tuple(v for k, v in outputs.items() if k not in ignore_keys + ["loss"])
             else:
                 logits = outputs[1:]
-        
+
         if prediction_loss_only:
             return (loss, None, None)
 
@@ -66,9 +65,7 @@ class RRTrainer(Trainer):
 
         return (loss, logits, None)
 
-
     def compute_loss(self, model, inputs, return_outputs=False):
         pos_pairs, neg_pairs = inputs
         outputs = model(pos_pairs=pos_pairs, neg_pairs=neg_pairs)
         return (outputs.loss, outputs) if return_outputs else outputs.loss
-

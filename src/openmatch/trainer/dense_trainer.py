@@ -10,7 +10,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
 from transformers.file_utils import is_datasets_available
-from transformers.trainer import Trainer, TRAINING_ARGS_NAME
+from transformers.trainer import TRAINING_ARGS_NAME, Trainer
 from transformers.trainer_pt_utils import IterableDatasetShard
 
 from ..loss import DistributedContrastiveLoss, SimpleContrastiveLoss
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from grad_cache import GradCache
+
     _grad_cache_available = True
 except ModuleNotFoundError:
     _grad_cache_available = False
@@ -46,8 +47,7 @@ class DRTrainer(Trainer):
             self.delta_model.save_finetuned(output_dir + "/delta_model")
 
     def _prepare_inputs(
-            self,
-            inputs: Tuple[Dict[str, Union[torch.Tensor, Any]], ...]
+        self, inputs: Tuple[Dict[str, Union[torch.Tensor, Any]], ...]
     ) -> List[Dict[str, Union[torch.Tensor, Any]]]:
         prepared = []
         for x in inputs:
@@ -142,13 +142,16 @@ def get_dense_rep(x):
 
 class GCDenseTrainer(DRTrainer):
     def __init__(self, *args, **kwargs):
-        logger.info('Initializing Gradient Cache Trainer')
+        logger.info("Initializing Gradient Cache Trainer")
         if not _grad_cache_available:
             raise ValueError(
-                'Grad Cache package not available. You can obtain it from https://github.com/luyug/GradCache.')
+                "Grad Cache package not available. You can obtain it from https://github.com/luyug/GradCache."
+            )
         super(GCDenseTrainer, self).__init__(*args, **kwargs)
 
-        loss_fn_cls = DistributedContrastiveLoss if self.args.negatives_x_device else SimpleContrastiveLoss
+        loss_fn_cls = (
+            DistributedContrastiveLoss if self.args.negatives_x_device else SimpleContrastiveLoss
+        )
         loss_fn = loss_fn_cls()
 
         self.gc = GradCache(
@@ -158,13 +161,13 @@ class GCDenseTrainer(DRTrainer):
             split_input_fn=split_dense_inputs,
             get_rep_fn=get_dense_rep,
             fp16=self.args.fp16,
-            scaler=self.scaler
+            scaler=self.scaler,
         )
 
     def training_step(self, model, inputs) -> torch.Tensor:
         model.train()
         queries, passages = self._prepare_inputs(inputs)
-        queries, passages = {'query': queries}, {'passage': passages}
+        queries, passages = {"query": queries}, {"passage": passages}
 
         _distributed = self.args.local_rank > -1
         self.gc.models = [model, model]

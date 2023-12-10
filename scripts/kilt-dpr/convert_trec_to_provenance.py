@@ -1,8 +1,8 @@
 import argparse
-import json
 import csv
-from tqdm import tqdm
+import json
 
+from tqdm import tqdm
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -28,7 +28,9 @@ if __name__ == "__main__":
             pid, text, wikipedia_title, wikipedia_id, _, _ = row
             pid = int(pid)
             assert pid == i
-            pid2content.append({"text": text, "wikipedia_title": wikipedia_title, "wikipedia_id": wikipedia_id})
+            pid2content.append(
+                {"text": text, "wikipedia_title": wikipedia_title, "wikipedia_id": wikipedia_id}
+            )
             i += 1
 
     provenance = {}
@@ -43,7 +45,14 @@ if __name__ == "__main__":
             if qid != last_qid:  # new query
                 provenance[real_qid] = []
                 last_qid = qid
-            provenance[real_qid].append({"score": score, "text": pid2content[pid]["text"], "wikipedia_title": pid2content[pid]["wikipedia_title"], "wikipedia_id": pid2content[pid]["wikipedia_id"]})
-    
+            provenance[real_qid].append(
+                {
+                    "score": score,
+                    "text": pid2content[pid]["text"],
+                    "wikipedia_title": pid2content[pid]["wikipedia_title"],
+                    "wikipedia_id": pid2content[pid]["wikipedia_id"],
+                }
+            )
+
     with open(args.output_provenance_file, "w") as f:
         json.dump(provenance, f, indent=4)

@@ -2,6 +2,8 @@ import logging
 import os
 import sys
 
+from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
+
 from openmatch.arguments import DataArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
 from openmatch.arguments import ModelArguments
@@ -9,7 +11,6 @@ from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import SuccessiveRetriever
 from openmatch.utils import save_as_trec
-from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,9 @@ logger = logging.getLogger(__name__)
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, EncodingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, encoding_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -71,7 +74,7 @@ def main():
         batch_size=encoding_args.per_device_eval_batch_size,
         num_processes=encoding_args.world_size,
         process_index=encoding_args.process_index,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     retriever = SuccessiveRetriever.from_embeddings(model, encoding_args)
@@ -80,5 +83,5 @@ def main():
         save_as_trec(result, encoding_args.trec_save_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

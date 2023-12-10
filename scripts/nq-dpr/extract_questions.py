@@ -1,8 +1,8 @@
 import argparse
-import json
 import csv
-from tqdm import tqdm
+import json
 
+from tqdm import tqdm
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -11,12 +11,13 @@ if __name__ == "__main__":
     parser.add_argument("--output_qrels_file")
     args = parser.parse_args()
 
-    
     with open(args.input_train_file, "r") as fin:
         train_data = json.load(fin)
 
     qid = 0
-    with open(args.output_queries_file, "w") as fqueries, open(args.output_qrels_file, "w") as fqrels:
+    with open(args.output_queries_file, "w") as fqueries, open(
+        args.output_qrels_file, "w"
+    ) as fqrels:
         csv_writer = csv.writer(fqueries, delimiter="\t")
         for item in tqdm(train_data):
             qid_str = "train_" + str(qid)

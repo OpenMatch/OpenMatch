@@ -7,11 +7,15 @@ import torch
 from torch.cuda import amp
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import (AutoConfig, AutoTokenizer, HfArgumentParser,
-                          PreTrainedTokenizer, T5ForConditionalGeneration)
+from transformers import (
+    AutoConfig,
+    AutoTokenizer,
+    HfArgumentParser,
+    PreTrainedTokenizer,
+    T5ForConditionalGeneration,
+)
 
-from openmatch.arguments import (DataArguments, ModelArguments,
-                                 QGInferenceArguments)
+from openmatch.arguments import DataArguments, ModelArguments, QGInferenceArguments
 from openmatch.dataset import DRInferenceCollator, InferenceDataset
 
 logger = logging.getLogger(__name__)
@@ -20,7 +24,9 @@ logger = logging.getLogger(__name__)
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, QGInferenceArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        model_args, data_args, encoding_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, encoding_args = parser.parse_json_file(
+            json_file=os.path.abspath(sys.argv[1])
+        )
     else:
         model_args, data_args, encoding_args = parser.parse_args_into_dataclasses()
         model_args: ModelArguments
@@ -53,7 +59,7 @@ def main():
         )
     except OSError:
         config = None
-    
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -72,7 +78,7 @@ def main():
         batch_size=encoding_args.per_device_eval_batch_size,
         num_processes=encoding_args.world_size,
         process_index=encoding_args.process_index,
-        cache_dir=model_args.cache_dir
+        cache_dir=model_args.cache_dir,
     )
 
     model.to(encoding_args.device)
@@ -104,13 +110,18 @@ def main():
                     num_return_sequences=encoding_args.num_return_sequences,
                 )
                 # group outputs by doc
-                outputs = outputs.view(batch["input_ids"].shape[0], encoding_args.num_return_sequences, -1)
+                outputs = outputs.view(
+                    batch["input_ids"].shape[0], encoding_args.num_return_sequences, -1
+                )
         for queries in outputs:
             generated_queries.append(tokenizer.batch_decode(queries, skip_special_tokens=True))
-    
+
     if encoding_args.world_size > 1:
-        with open(encoding_args.queries_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f_queries, \
-             open(encoding_args.qrels_save_path + ".rank.{}".format(encoding_args.process_index), "w") as f_qrels:
+        with open(
+            encoding_args.queries_save_path + ".rank.{}".format(encoding_args.process_index), "w"
+        ) as f_queries, open(
+            encoding_args.qrels_save_path + ".rank.{}".format(encoding_args.process_index), "w"
+        ) as f_qrels:
             for docid, queries in zip(ids, generated_queries):
                 for qid, q in enumerate(queries):
                     if len(q) < 10:
@@ -127,8 +138,9 @@ def main():
                         ids.append(id_)
                         generated_queries.append(q)
     if encoding_args.process_index == 0:
-        with open(encoding_args.queries_save_path, "w") as f_queries, \
-             open(encoding_args.qrels_save_path, "w") as f_qrels:
+        with open(encoding_args.queries_save_path, "w") as f_queries, open(
+            encoding_args.qrels_save_path, "w"
+        ) as f_qrels:
             for docid, queries in zip(ids, generated_queries):
                 for qid, q in enumerate(queries):
                     if len(q) < 10:
@@ -137,5 +149,5 @@ def main():
                     f_qrels.write(f"generated_q_{qid}_for_{docid}\t0\t{docid}\t1\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
