@@ -107,7 +107,7 @@ class ContrastiveQueryGenerator:
         pos_docids = []
         neg_docids = []
         generated_queries = []
-        for (batch_ids_q, batch_ids_posd, batch_ids_negd, batch) in tqdm(
+        for batch_ids_q, batch_ids_posd, batch_ids_negd, batch in tqdm(
             dataloader, disable=self.args.process_index > 0
         ):
             qids.extend(batch_ids_q)

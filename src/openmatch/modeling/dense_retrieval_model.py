@@ -107,13 +107,10 @@ class DRModel(nn.Module):
         negative: Dict[str, Tensor] = None,
         score: Tensor = None,
     ):
-
         q_hidden, q_reps = self.encode_query(query)  # (batch_size, hidden_size)
 
         if self.train_args.distillation:
-
             if self.train_args.distil_mode == "pairwise":
-
                 pos_hidden, pos_reps = self.encode_passage(positive)
                 neg_hidden, neg_reps = self.encode_passage(negative)
                 scores_pos = torch.sum(q_reps * pos_reps, dim=1)
@@ -143,7 +140,6 @@ class DRModel(nn.Module):
                 return DROutput(q_reps=q_reps, p_reps=p_reps, loss=loss, scores=scores_pred)
 
         else:
-
             p_hidden, p_reps = self.encode_passage(passage)
 
             if q_reps is None or p_reps is None:

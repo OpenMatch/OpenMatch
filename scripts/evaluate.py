@@ -102,7 +102,6 @@ if __name__ == "__main__":
         run = pytrec_eval.parse_run(f_run)
 
     if args.measure is not None and "mrr" in args.measure:
-
         if "mrr_cut" in args.measure:
             mrr_result = eval_mrr(qrel, run, cutoff=int(args.measure.split(".")[-1]))
         else:

@@ -52,7 +52,7 @@ def main():
     data_samples = []
     q_last = ""
     # get data samples for mrr
-    for (index, row) in tqdm(df.iterrows()):
+    for index, row in tqdm(df.iterrows()):
         if q_last != row["query_id"]:
             query2id = {}
             query2id["query"] = row["query_id"]

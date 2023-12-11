@@ -83,7 +83,7 @@ class Retriever:
         lookup_indices = []
         idx = 0
         prev_idx = 0
-        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.process_index > 0):
+        for batch_ids, batch in tqdm(dataloader, disable=self.args.process_index > 0):
             lookup_indices.extend(batch_ids)
             idx += len(batch_ids)
             with amp.autocast() if self.args.fp16 else nullcontext():
@@ -196,7 +196,7 @@ class Retriever:
         )
         encoded = []
         lookup_indices = []
-        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.process_index > 0):
+        for batch_ids, batch in tqdm(dataloader, disable=self.args.process_index > 0):
             lookup_indices.extend(batch_ids)
             with amp.autocast() if self.args.fp16 else nullcontext():
                 with torch.no_grad():
