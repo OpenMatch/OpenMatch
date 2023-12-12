@@ -18,7 +18,6 @@ def load_code_data(file_path=None):
 
 
 def main():
-
     parser = ArgumentParser()
     parser.add_argument("--input", type=str, default="D:\\T5数据\\CSN\\test.jsonl")
     parser.add_argument("--output", type=str, default="D:\\T5数据\\CSN\\codequery.jsonl")

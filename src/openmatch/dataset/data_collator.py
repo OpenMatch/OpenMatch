@@ -80,7 +80,6 @@ class PairCollator(DataCollatorWithPadding):
 
 @dataclass
 class PairwiseDistillationCollator(DataCollatorWithPadding):
-
     max_q_len: int = 32
     max_p_len: int = 128
 
@@ -122,7 +121,6 @@ class PairwiseDistillationCollator(DataCollatorWithPadding):
 
 @dataclass
 class ListwiseDistillationCollator(DataCollatorWithPadding):
-
     max_q_len: int = 32
     max_p_len: int = 128
 

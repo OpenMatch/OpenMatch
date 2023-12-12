@@ -63,7 +63,7 @@ def generate_product_result(args, df_hypothesis):
     l_product_id = []
     l_ranking_postion = []
     l_score = []
-    for (query_id, rows) in df_results_product_id:
+    for query_id, rows in df_results_product_id:
         n = len(rows)
         l_query_id += [query_id for _ in range(n)]
         l_product_id += rows[col_product_id].to_list()
@@ -165,7 +165,7 @@ def main():
         data_samples = []
         q_last = ""
         # get data samples for mrr
-        for (index, row) in tqdm(df.iterrows()):
+        for index, row in tqdm(df.iterrows()):
             if q_last != row["query_id"]:
                 query2id = {}
                 query2id["query"] = row["query_id"]

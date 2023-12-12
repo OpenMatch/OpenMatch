@@ -16,7 +16,6 @@ import numpy as np
 from tqdm import tqdm
 
 if __name__ == "__main__":
-
     parser = ArgumentParser()
     parser.add_argument("--data_dir", default="")
     parser.add_argument("--input_folder_1", required=True)

@@ -93,7 +93,7 @@ def main():
     )
     ids = []
     generated_queries = []
-    for (batch_ids, batch) in tqdm(dataloader, disable=encoding_args.process_index > 0):
+    for batch_ids, batch in tqdm(dataloader, disable=encoding_args.process_index > 0):
         ids.extend(batch_ids)
         with amp.autocast() if encoding_args.fp16 else nullcontext():
             with torch.no_grad():
