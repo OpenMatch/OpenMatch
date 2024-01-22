@@ -274,7 +274,7 @@ def merge_retrieval_results_by_score(results: List[Dict[str, Dict[str, float]]],
     for qid in merged_results:
         merged_results[qid] = {
             k: v
-            for k, v in sorted(merged_results[qid].items(), key=lambda x: x[1], reverse=True)[:topk]
+            for k, v in sorted(merged_results[qid].items(), key=lambda x: x[1]["score"], reverse=True)[:topk]
         }
     return merged_results
 
