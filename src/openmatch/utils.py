@@ -259,7 +259,9 @@ def fill_template(
     return template
 
 
-def merge_retrieval_results_by_score(results: List[Dict[str, Dict[str, Dict[str, float]]]], topk: int = 100):
+def merge_retrieval_results_by_score(
+    results: List[Dict[str, Dict[str, Dict[str, float]]]], topk: int = 100
+):
     """
     Merge retrieval results from multiple partitions of document embeddings and keep topk.
     """
