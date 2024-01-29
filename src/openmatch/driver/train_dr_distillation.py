@@ -131,12 +131,14 @@ def main():
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        data_collator=PairwiseDistillationCollator(
-            tokenizer, max_p_len=data_args.p_max_len, max_q_len=data_args.q_max_len
-        )
-        if training_args.distil_mode == "pairwise"
-        else ListwiseDistillationCollator(
-            tokenizer, max_p_len=data_args.p_max_len, max_q_len=data_args.q_max_len
+        data_collator=(
+            PairwiseDistillationCollator(
+                tokenizer, max_p_len=data_args.p_max_len, max_q_len=data_args.q_max_len
+            )
+            if training_args.distil_mode == "pairwise"
+            else ListwiseDistillationCollator(
+                tokenizer, max_p_len=data_args.p_max_len, max_q_len=data_args.q_max_len
+            )
         ),
         delta_model=delta_model if model_args.param_efficient_method else None,
     )
