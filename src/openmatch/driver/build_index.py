@@ -60,9 +60,11 @@ def main():
     )
     try:
         processor = AutoProcessor.from_pretrained(
-            model_args.processor_name
-            if model_args.processor_name
-            else model_args.model_name_or_path,
+            (
+                model_args.processor_name
+                if model_args.processor_name
+                else model_args.model_name_or_path
+            ),
             cache_dir=model_args.cache_dir,
         )
     except (ValueError, OSError):

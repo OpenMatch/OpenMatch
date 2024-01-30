@@ -7,6 +7,7 @@ Creation Date : 06/12/2018
 Last Modified : 4/09/2019
 Authors : Daniel Campos <dacamp@microsoft.com>, Rutger van Haasteren <ruvanh@microsoft.com>
 """
+
 import statistics
 import sys
 from collections import Counter
