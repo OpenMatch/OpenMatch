@@ -6,9 +6,8 @@ import sys
 
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
 
-from openmatch.arguments import DataArguments
+from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import DRTrainingArguments as TrainingArguments
-from openmatch.arguments import ModelArguments
 from openmatch.dataset import (
     ListwiseDistillationCollator,
     MappingListwiseDistillationTrainDataset,
