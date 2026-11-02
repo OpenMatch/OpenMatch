@@ -4,9 +4,8 @@ import sys
 
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser
 
-from openmatch.arguments import DataArguments
+from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import InferenceArguments as EncodingArguments
-from openmatch.arguments import ModelArguments
 from openmatch.dataset import InferenceDataset
 from openmatch.modeling import DRModelForInference
 from openmatch.retriever import Retriever

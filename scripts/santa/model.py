@@ -22,9 +22,8 @@ from transformers import (
 )
 from transformers.modeling_outputs import ModelOutput
 
-from openmatch.arguments import DataArguments
+from openmatch.arguments import DataArguments, ModelArguments
 from openmatch.arguments import DRTrainingArguments as TrainingArguments
-from openmatch.arguments import ModelArguments
 from openmatch.modeling.linear import LinearHead
 from openmatch.utils import mean_pooling
 

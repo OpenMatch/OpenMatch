@@ -22,9 +22,8 @@ from transformers import (
 )
 from transformers.modeling_outputs import ModelOutput
 
-from ..arguments import DataArguments
+from ..arguments import DataArguments, ModelArguments
 from ..arguments import DRTrainingArguments as TrainingArguments
-from ..arguments import ModelArguments
 from ..utils import mean_pooling
 from .linear import LinearHead
 
